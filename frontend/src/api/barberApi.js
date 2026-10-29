@@ -32,3 +32,41 @@ export const getUserProfile = async () => {
   return response.data;
 };
 
+/**
+ * Log in user
+ */
+export const loginUser = async ({ email, password }) => {
+  const response = await api.post('/login', { email, password });
+  return response.data;
+};
+
+/**
+ * Register new user
+ */
+export const registerUser = async ({ name, email, password, password_confirmation }) => {
+  const response = await api.post('/register', {
+    name,
+    email,
+    password,
+    password_confirmation,
+  });
+  return response.data;
+};
+
+/**
+ * Log out user
+ */
+export const logoutUser = async () => {
+  const response = await api.post('/logout');
+  return response.data;
+};
+
+/**
+ * Request password reset link
+ */
+export const forgotPassword = async ({ email }) => {
+  const response = await api.post('/forgot-password', { email });
+  return response.data;
+};
+
+

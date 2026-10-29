@@ -38,6 +38,7 @@ api.interceptors.response.use(
       // Session or token expired
       console.warn('Unauthorized. Clearing stored credentials...');
       localStorage.removeItem('token');
+      localStorage.removeItem('user');
       // Optional: window.location.href = '/login';
     } else if (status === 419) {
       // CSRF token mismatch in Laravel
