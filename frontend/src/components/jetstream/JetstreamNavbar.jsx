@@ -69,11 +69,11 @@ export default function JetstreamNavbar({
                 onClick={() => onOpenAuth(isAuthenticated ? 'profile' : 'login')}
                 className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition cursor-pointer ${
                   currentView === 'auth'
-                    ? 'border-indigo-500 text-gray-900'
+                    ? 'border-indigo-500 text-gray-900 font-semibold'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                {isAuthenticated ? 'My Account' : (loading && token ? 'Verifying...' : 'Jetstream Auth')}
+                {isAuthenticated ? 'Mon Espace' : (loading && token ? 'Vérification...' : 'Espace Client')}
               </button>
             </div>
           </div>
@@ -154,16 +154,16 @@ export default function JetstreamNavbar({
                 <button
                   type="button"
                   onClick={() => onOpenAuth('login')}
-                  className="text-sm font-medium text-gray-600 hover:text-gray-900 px-3 py-1.5 rounded-md hover:bg-gray-50 transition cursor-pointer"
+                  className="text-sm font-medium text-gray-700 hover:text-gray-900 px-3 py-1.5 rounded-md hover:bg-gray-100 transition cursor-pointer"
                 >
-                  Log in
+                  Connexion
                 </button>
                 <button
                   type="button"
                   onClick={() => onOpenAuth('register')}
-                  className="text-xs font-semibold uppercase tracking-wider text-white bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-md shadow-sm transition cursor-pointer"
+                  className="text-xs font-bold uppercase tracking-wider text-gray-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 px-4 py-2 rounded-lg shadow-sm hover:shadow transition cursor-pointer"
                 >
-                  Register
+                  Inscription
                 </button>
               </div>
             )}
@@ -255,7 +255,7 @@ export default function JetstreamNavbar({
                 }}
                 className="flex-1 text-center py-2 px-3 border border-gray-300 rounded-md text-sm font-medium text-gray-700"
               >
-                Log in
+                Connexion
               </button>
               <button
                 type="button"
@@ -263,9 +263,9 @@ export default function JetstreamNavbar({
                   setMobileMenuOpen(false);
                   onOpenAuth('register');
                 }}
-                className="flex-1 text-center py-2 px-3 bg-gray-800 text-white rounded-md text-sm font-medium"
+                className="flex-1 text-center py-2 px-3 bg-amber-500 text-gray-950 font-bold rounded-md text-sm"
               >
-                Register
+                Inscription
               </button>
             </div>
           )}

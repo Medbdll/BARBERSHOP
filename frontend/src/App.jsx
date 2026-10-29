@@ -3,7 +3,7 @@ import { checkBackendStatus, getServices, getBarbers } from './api/barberApi';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './context/useAuth';
 import JetstreamNavbar from './components/jetstream/JetstreamNavbar';
-import AuthPage from './components/jetstream/AuthPage';
+import LuxurySplitAuth from './components/auth/LuxurySplitAuth';
 import './App.css';
 
 function MainApp() {
@@ -93,17 +93,10 @@ function MainApp() {
 
   if (currentView === 'auth') {
     return (
-      <div className="min-h-screen bg-gray-100 font-sans">
-        <JetstreamNavbar
-          currentView={currentView}
-          onNavigate={(view) => setCurrentView(view)}
-          onOpenAuth={handleOpenAuth}
-        />
-        <AuthPage
-          initialMode={authMode}
-          onBackToShop={() => setCurrentView('shop')}
-        />
-      </div>
+      <LuxurySplitAuth
+        initialMode={authMode}
+        onBackToShop={() => setCurrentView('shop')}
+      />
     );
   }
 

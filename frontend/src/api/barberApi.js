@@ -43,10 +43,11 @@ export const loginUser = async ({ email, password }) => {
 /**
  * Register new user
  */
-export const registerUser = async ({ name, email, password, password_confirmation }) => {
+export const registerUser = async ({ name, email, phone, password, password_confirmation }) => {
   const response = await api.post('/register', {
     name,
     email,
+    phone,
     password,
     password_confirmation,
   });
