@@ -3,27 +3,20 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
     /**
-     * Handle user registration.
+     * Register a new client user (assigns client role by default).
      */
     public function register(Request $request): JsonResponse
     {
-        if ($request->user('sanctum')) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'You are already logged in and cannot register a new account.',
-            ], 403);
-        }
-
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
@@ -35,33 +28,32 @@ class AuthController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'phone' => $request->phone,
+            'loyalty_points' => 50, // Welcome loyalty points
             'password' => Hash::make($request->password),
         ]);
+
+        // Assign 'client' role by default
+        $user->assignRole('client');
 
         $token = $user->createToken('auth-token')->plainTextToken;
 
         return response()->json([
             'status' => 'success',
-            'message' => 'User registered successfully',
-            'user' => $user,
+            'message' => 'Inscription réussie. Bienvenue parmi nos clients VIP !',
             'token' => $token,
+            'user' => new UserResource($user),
+            'roles' => $user->getRoleNames(),
+            'permissions' => $user->getAllPermissions()->pluck('name'),
         ], 201);
     }
 
     /**
-     * Handle user login.
+     * Login user (returns Bearer token + user object + roles array + permissions array).
      *
      * @throws ValidationException
      */
     public function login(Request $request): JsonResponse
     {
-        if ($request->user('sanctum')) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'You are already logged in.',
-            ], 403);
-        }
-
         $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required'],
@@ -71,7 +63,7 @@ class AuthController extends Controller
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
-                'email' => [trans('auth.failed')],
+                'email' => ['Les identifiants fournis ne correspondent à aucun compte client ou employé.'],
             ]);
         }
 
@@ -79,47 +71,31 @@ class AuthController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Logged in successfully',
-            'user' => $user,
+            'message' => 'Connexion réussie',
             'token' => $token,
+            'user' => new UserResource($user),
+            'roles' => $user->getRoleNames(),
+            'permissions' => $user->getAllPermissions()->pluck('name'),
         ]);
     }
 
     /**
-     * Request a password reset link.
-     *
-     * @throws ValidationException
+     * Get the authenticated user's profile with roles and permissions.
      */
-    public function forgotPassword(Request $request): JsonResponse
+    public function me(Request $request): JsonResponse
     {
-        $request->validate([
-            'email' => ['required', 'email'],
-        ]);
+        $user = $request->user();
 
-        $status = Password::sendResetLink($request->only('email'));
-
-        if ($status === Password::RESET_LINK_SENT) {
-            return response()->json([
-                'status' => 'success',
-                'message' => trans($status),
-            ]);
-        }
-
-        throw ValidationException::withMessages([
-            'email' => [trans($status)],
+        return response()->json([
+            'status' => 'success',
+            'user' => new UserResource($user),
+            'roles' => $user->getRoleNames(),
+            'permissions' => $user->getAllPermissions()->pluck('name'),
         ]);
     }
 
     /**
-     * Get the authenticated user's profile.
-     */
-    public function user(Request $request): JsonResponse
-    {
-        return response()->json($request->user());
-    }
-
-    /**
-     * Log out the authenticated user by revoking the current Sanctum token.
+     * Log out by revoking current Sanctum token.
      */
     public function logout(Request $request): JsonResponse
     {
@@ -131,8 +107,7 @@ class AuthController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Logged out successfully',
+            'message' => 'Déconnexion effectuée avec succès',
         ]);
     }
 }
-

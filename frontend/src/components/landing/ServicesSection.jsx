@@ -1,0 +1,154 @@
+import React, { useState } from 'react';
+import { servicesData as fallbackServices } from '../../data/barberShopData';
+
+export default function ServicesSection({
+  lang,
+  t,
+  services = [],
+  loading = false,
+  onSelectService,
+  selectedServiceId,
+}) {
+  const [activeCategory, setActiveCategory] = useState('all');
+
+  const categories = [
+    { key: 'all', label: t.services.filterAll },
+    { key: 'hair', label: t.services.filterHair },
+    { key: 'beard', label: t.services.filterBeard },
+    { key: 'care', label: t.services.filterCare },
+    { key: 'vip', label: t.services.filterVip },
+  ];
+
+  const sourceData = services && services.length > 0 ? services : fallbackServices;
+
+  const filteredServices =
+    activeCategory === 'all'
+      ? sourceData
+      : sourceData.filter((s) => s.category === activeCategory);
+
+  return (
+    <section id="services" className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      {/* Section Header */}
+      <div className="text-center max-w-3xl mx-auto mb-14 space-y-3">
+        <span className="text-xs font-bold uppercase tracking-widest text-amber-400 bg-amber-500/10 px-3.5 py-1 rounded-full border border-amber-500/20">
+          {t.services.badge}
+        </span>
+        <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+          {t.services.title}
+        </h2>
+        <p className="text-sm sm:text-base text-gray-400">
+          {t.services.subtitle}
+        </p>
+
+        {/* Filter Category Tabs */}
+        <div className="flex flex-wrap items-center justify-center gap-2 pt-6">
+          {categories.map((cat) => (
+            <button
+              key={cat.key}
+              type="button"
+              onClick={() => setActiveCategory(cat.key)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                activeCategory === cat.key
+                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-gray-950 shadow-lg shadow-amber-500/20'
+                  : 'bg-gray-900/90 text-gray-300 hover:text-white border border-gray-800 hover:border-gray-700'
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Services Grid or Skeleton */}
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-pulse">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <div key={i} className="rounded-2xl p-6 bg-gray-900/50 border border-gray-800 h-64 flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="h-5 bg-gray-800 rounded w-3/4"></div>
+                <div className="h-3 bg-gray-800/60 rounded w-full"></div>
+                <div className="h-3 bg-gray-800/60 rounded w-2/3"></div>
+              </div>
+              <div className="h-8 bg-gray-800 rounded"></div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredServices.map((service) => {
+            const isSelected = selectedServiceId === service.id;
+            const name = lang === 'ar' ? (service.nameAr || service.name) : (service.nameFr || service.name);
+            const desc = lang === 'ar' ? (service.descriptionAr || service.description) : (service.descriptionFr || service.description);
+            const formattedDuration = typeof service.duration === 'number' ? `${service.duration} min` : service.duration;
+
+            return (
+              <div
+                key={service.id}
+                className={`rounded-2xl p-6 flex flex-col justify-between transition-all duration-300 relative group ${
+                  isSelected
+                    ? 'bg-gray-900 border-2 border-amber-500 shadow-xl shadow-amber-500/10'
+                    : 'bg-gray-900/60 hover:bg-gray-900/90 border border-gray-800 hover:border-amber-500/40 shadow-lg'
+                }`}
+              >
+                {/* Popular or Recommended badge */}
+                {(service.popular || service.category === 'vip') && (
+                  <div className="absolute -top-3 right-4 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-gray-950 text-[10px] font-black uppercase tracking-wider shadow">
+                    Prestige
+                  </div>
+                )}
+
+                {/* Service Info */}
+                <div>
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <h3 className="font-bold text-white text-base leading-snug group-hover:text-amber-300 transition-colors">
+                      {name}
+                    </h3>
+                  </div>
+
+                  <p className="text-xs text-gray-400 line-clamp-3 mb-4 leading-relaxed">
+                    {desc}
+                  </p>
+                </div>
+
+                {/* Footer: Duration, Price in MAD, Select CTA */}
+                <div className="pt-4 border-t border-gray-800/80 space-y-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="flex items-center gap-1.5 text-gray-400 font-medium">
+                      <span>⏱</span>
+                      <span>{formattedDuration}</span>
+                    </span>
+
+                    <div className="text-right">
+                      <span className="text-lg font-black text-amber-400 font-mono">
+                        {service.price}
+                      </span>{' '}
+                      <span className="text-xs font-bold text-amber-500/80">
+                        {service.currency || 'MAD'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => onSelectService(service)}
+                    className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 ${
+                      isSelected
+                        ? 'bg-emerald-500 text-gray-950 shadow-md shadow-emerald-500/20'
+                        : 'bg-gray-800 hover:bg-amber-500 text-gray-200 hover:text-gray-950 border border-gray-700 hover:border-amber-500 shadow'
+                    }`}
+                  >
+                    {isSelected ? (
+                      <span>{t.services.selectedBtn}</span>
+                    ) : (
+                      <span>{t.services.selectBtn}</span>
+                    )}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}

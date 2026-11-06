@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import LuxuryLoginForm from './LuxuryLoginForm';
 import LuxuryRegisterForm from './LuxuryRegisterForm';
 import LuxuryForgotPasswordForm from './LuxuryForgotPasswordForm';
@@ -10,8 +11,23 @@ export default function LuxurySplitAuth({
   initialMode = 'login',
   onBackToShop,
 }) {
-  const { isAuthenticated, loading: authLoading } = useAuth();
-  const [mode, setMode] = useState(initialMode); // 'login' | 'register' | 'forgot-password'
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user, isAuthenticated, isAdmin, isEmploye, loading: authLoading, defaultDashboard } = useAuth();
+  
+  const startingMode = location.state?.initialMode || initialMode;
+  const [mode, setMode] = useState(startingMode); // 'login' | 'register' | 'forgot-password'
+
+  // If already authenticated as admin or employe, redirect directly to their dashboard
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      if (isAdmin) {
+        navigate('/admin', { replace: true });
+      } else if (isEmploye) {
+        navigate('/employe', { replace: true });
+      }
+    }
+  }, [isAuthenticated, isAdmin, isEmploye, navigate]);
 
   // If user is already authenticated, strictly pin active mode to 'profile'
   const activeMode = isAuthenticated ? 'profile' : mode;
@@ -19,6 +35,31 @@ export default function LuxurySplitAuth({
   const handleSetMode = (targetMode) => {
     if (isAuthenticated) return;
     setMode(targetMode);
+  };
+
+  const handleAuthSuccess = (loggedUser) => {
+    const targetUser = loggedUser || user;
+    const userRoles = Array.isArray(targetUser?.roles)
+      ? targetUser.roles.map((r) => (typeof r === 'string' ? r : r.name))
+      : [];
+
+    // Admin immediately finds only the dashboard
+    if (userRoles.includes('admin')) {
+      navigate('/admin', { replace: true });
+      return;
+    }
+
+    if (userRoles.includes('employe')) {
+      navigate('/employe', { replace: true });
+      return;
+    }
+
+    const fromPath = location.state?.from?.pathname;
+    if (fromPath && !['/auth', '/login', '/register', '/'].includes(fromPath)) {
+      navigate(fromPath, { replace: true });
+    } else {
+      navigate(defaultDashboard || '/client', { replace: true });
+    }
   };
 
   return (
@@ -196,7 +237,7 @@ export default function LuxurySplitAuth({
           ) : activeMode === 'register' ? (
             <LuxuryRegisterForm
               onSwitchToLogin={() => handleSetMode('login')}
-              onSuccess={() => handleSetMode('profile')}
+              onSuccess={handleAuthSuccess}
             />
           ) : activeMode === 'forgot-password' ? (
             <LuxuryForgotPasswordForm
@@ -206,7 +247,7 @@ export default function LuxurySplitAuth({
             <LuxuryLoginForm
               onSwitchToRegister={() => handleSetMode('register')}
               onSwitchToForgotPassword={() => handleSetMode('forgot-password')}
-              onSuccess={() => handleSetMode('profile')}
+              onSuccess={handleAuthSuccess}
             />
           )}
         </div>
