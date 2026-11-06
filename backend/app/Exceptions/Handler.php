@@ -26,5 +26,16 @@ class Handler extends ExceptionHandler
         $this->reportable(function (Throwable $e) {
             //
         });
+
+        $this->renderable(function (\Spatie\Permission\Exceptions\UnauthorizedException $e, $request) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Accès refusé : Permissions ou rôle insuffisant.',
+                    'required_roles' => $e->getRequiredRoles(),
+                    'required_permissions' => $e->getRequiredPermissions(),
+                ], 403);
+            }
+        });
     }
 }

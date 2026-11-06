@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { AuthContext } from './AuthContextInstance';
 import { getUserProfile, loginUser, registerUser, logoutUser } from '../api/barberApi';
 
@@ -40,10 +40,16 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        const profile = await getUserProfile();
+        const res = await getUserProfile();
+        const profile = res?.data || res;
         if (isMounted) {
-          setUser(profile);
-          localStorage.setItem('user', JSON.stringify(profile));
+          const userObj = {
+            ...profile,
+            roles: profile.roles || res?.roles || [],
+            permissions: profile.permissions || res?.permissions || [],
+          };
+          setUser(userObj);
+          localStorage.setItem('user', JSON.stringify(userObj));
         }
       } catch (err) {
         // ONLY clear credentials if server explicitly returned 401 Unauthorized
@@ -76,10 +82,16 @@ export function AuthProvider({ children }) {
   const login = async (credentials) => {
     const data = await loginUser(credentials);
     if (data?.token && data?.user) {
+      const userObj = {
+        ...data.user,
+        roles: data.user.roles || data.roles || [],
+        permissions: data.user.permissions || data.permissions || [],
+      };
       localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('user', JSON.stringify(userObj));
       setToken(data.token);
-      setUser(data.user);
+      setUser(userObj);
+      return { ...data, user: userObj };
     }
     return data;
   };
@@ -87,10 +99,16 @@ export function AuthProvider({ children }) {
   const register = async (userData) => {
     const data = await registerUser(userData);
     if (data?.token && data?.user) {
+      const userObj = {
+        ...data.user,
+        roles: data.user.roles || data.roles || ['client'],
+        permissions: data.user.permissions || data.permissions || [],
+      };
       localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('user', JSON.stringify(userObj));
       setToken(data.token);
-      setUser(data.user);
+      setUser(userObj);
+      return { ...data, user: userObj };
     }
     return data;
   };
@@ -108,7 +126,45 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // User is authenticated if token exists AND user object is present (restored immediately from localStorage)
+  const roles = useMemo(() => {
+    if (!user) return [];
+    if (Array.isArray(user.roles)) {
+      return user.roles.map((r) => (typeof r === 'string' ? r : r.name));
+    }
+    return [];
+  }, [user]);
+
+  const permissions = useMemo(() => {
+    if (!user) return [];
+    if (Array.isArray(user.permissions)) {
+      return user.permissions.map((p) => (typeof p === 'string' ? p : p.name));
+    }
+    return [];
+  }, [user]);
+
+  const hasRole = (role) => {
+    if (Array.isArray(role)) {
+      return role.some((r) => roles.includes(r));
+    }
+    return roles.includes(role);
+  };
+
+  const hasPermission = (permission) => {
+    return permissions.includes(permission);
+  };
+
+  const isAdmin = roles.includes('admin');
+  const isEmploye = roles.includes('employe');
+  const isClient = roles.includes('client');
+
+  const defaultDashboard = useMemo(() => {
+    if (isAdmin) return '/admin';
+    if (isEmploye) return '/employe';
+    if (isClient) return '/client';
+    return '/';
+  }, [isAdmin, isEmploye, isClient]);
+
+  // User is authenticated if token exists AND user object is present
   const isAuthenticated = !!(token && user);
 
   return (
@@ -116,6 +172,14 @@ export function AuthProvider({ children }) {
       value={{
         user,
         token,
+        roles,
+        permissions,
+        hasRole,
+        hasPermission,
+        isAdmin,
+        isEmploye,
+        isClient,
+        defaultDashboard,
         isAuthenticated,
         loading,
         login,
