@@ -14,7 +14,7 @@ return [
 
     'allowed_origins' => [
         'http://localhost:5173',
-        'http://idvwvtpnflheodj9xkexkjyi.51.170.140.38.sslip.io',
+        'https://idvwvtpnflheodj9xkexkjyi.51.170.140.38.sslip.io',
     ],
 
     'allowed_origins_patterns' => [
