@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AdminApiController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ClientAppointmentController;
 use App\Http\Controllers\Api\EmployeScheduleController;
+use App\Http\Controllers\Api\GoogleAuthController;
 use App\Http\Controllers\Api\PublicApiController;
 use Illuminate\Support\Facades\Route;
 
@@ -25,6 +26,12 @@ Route::get('/gallery', [PublicApiController::class, 'gallery']);
 // Authentication Routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+
+// Google OAuth2 Stateless Routes
+Route::prefix('auth/google')->group(function () {
+    Route::get('/redirect', [GoogleAuthController::class, 'redirect']);
+    Route::get('/callback', [GoogleAuthController::class, 'callback']);
+});
 
 // ========================================================
 // 2. AUTHENTICATED USER COMMON ROUTES
