@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import LuxuryInput from './LuxuryInput';
 import GoogleAuthButton from './GoogleAuthButton';
 import { MailIcon, LockIcon } from './AuthIcons';
@@ -10,11 +11,19 @@ export default function LuxuryLoginForm({
   onSuccess,
 }) {
   const { login } = useAuth();
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const urlError = searchParams.get('error');
+    if (urlError) {
+      setError(decodeURIComponent(urlError));
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -66,7 +75,7 @@ export default function LuxuryLoginForm({
       )}
 
       {/* Google OAuth Button */}
-      <GoogleAuthButton text="Continuer avec Google" />
+      <GoogleAuthButton text="Continuer avec Google" onError={(msg) => setError(msg)} />
 
       {/* Luxury Divider */}
       <div className="relative flex items-center justify-center">

@@ -11,6 +11,7 @@ const LuxurySplitAuth = React.lazy(() => import('./components/auth/LuxurySplitAu
 const ClientPortal = React.lazy(() => import('./components/client/ClientPortal'));
 const EmployePortal = React.lazy(() => import('./components/employe/EmployePortal'));
 const AdminPortal = React.lazy(() => import('./components/admin/AdminPortal'));
+const GoogleCallback = React.lazy(() => import('./components/auth/GoogleCallback'));
 
 function LuxuryPageFallback() {
   return (
@@ -98,6 +99,9 @@ export default function App() {
             <Route path="/auth" element={<AuthPageWrapper initialMode="login" />} />
             <Route path="/login" element={<AuthPageWrapper initialMode="login" />} />
             <Route path="/register" element={<AuthPageWrapper initialMode="register" />} />
+
+            {/* Google OAuth2 Stateless Callback */}
+            <Route path="/auth/google/callback" element={<GoogleCallback />} />
 
             {/* Role-Based Protected Routes */}
 

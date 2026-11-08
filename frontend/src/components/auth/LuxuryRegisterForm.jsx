@@ -91,7 +91,7 @@ export default function LuxuryRegisterForm({ onSwitchToLogin, onSuccess }) {
       )}
 
       {/* Google OAuth Button */}
-      <GoogleAuthButton text="S’inscrire avec Google" />
+      <GoogleAuthButton text="S’inscrire avec Google" onError={(msg) => setErrors([msg])} />
 
       {/* Luxury Divider */}
       <div className="relative flex items-center justify-center">

@@ -49,6 +49,11 @@ export const getGallery = async () => {
  * =====================================================================
  */
 
+export const getGoogleAuthRedirectUrl = async () => {
+  const response = await api.get('/auth/google/redirect');
+  return response.data;
+};
+
 export const loginUser = async ({ email, password }) => {
   const response = await api.post('/login', { email, password });
   return response.data;
