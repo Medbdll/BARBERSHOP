@@ -2,16 +2,21 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ScissorsIcon } from '../auth/AuthIcons';
 import { useAuth } from '../../context/useAuth';
+import { useLanguage } from '../../context/LanguageContext';
 import BrandLogo from '../common/BrandLogo';
+import LanguageSwitcher from '../common/LanguageSwitcher';
 
 export default function LandingNavbar({
-  lang = 'fr',
+  lang: propLang,
   onToggleLang,
-  t,
+  t: propT,
   onOpenAuth,
   onOpenBooking,
 }) {
   const { user, isAuthenticated, logout, defaultDashboard, isAdmin, isEmploye } = useAuth();
+  const langContext = useLanguage();
+  const lang = propLang || langContext.lang;
+  const t = propT || langContext.t;
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -81,31 +86,8 @@ export default function LandingNavbar({
 
           {/* Right Action Controls: Lang Switcher, Auth & Booking */}
           <div className="hidden sm:flex items-center gap-3.5">
-            {/* Language Switcher (FR / AR) */}
-            <div className="flex items-center p-0.5 rounded-lg bg-gray-950/80 border border-gray-800 text-xs font-bold">
-              <button
-                type="button"
-                onClick={() => onToggleLang('fr')}
-                className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-                  lang === 'fr'
-                    ? 'bg-amber-500 text-gray-950 shadow-sm'
-                    : 'text-gray-400 hover:text-gray-200'
-                }`}
-              >
-                FR
-              </button>
-              <button
-                type="button"
-                onClick={() => onToggleLang('ar')}
-                className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-                  lang === 'ar'
-                    ? 'bg-amber-500 text-gray-950 shadow-sm'
-                    : 'text-gray-400 hover:text-gray-200'
-                }`}
-              >
-                AR
-              </button>
-            </div>
+            {/* Language Switcher (FR / العربية) */}
+            <LanguageSwitcher variant="pills" />
 
             {/* Auth Buttons */}
             {isAuthenticated ? (
@@ -129,8 +111,8 @@ export default function LandingNavbar({
                 {/* Dropdown menu */}
                 {userDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-52 rounded-xl bg-gray-900 border border-gray-800 shadow-2xl py-1 z-50 text-xs">
-                    <div className="px-3 py-2 text-gray-400 border-b border-gray-800">
-                      Connecté en tant que <br />
+                    <div className="px-3 py-2 text-gray-400 border-b border-gray-800 text-start">
+                      {t.nav.connectedAs} <br />
                       <strong className="text-white truncate block">{user?.email}</strong>
                     </div>
                     <button
@@ -138,9 +120,11 @@ export default function LandingNavbar({
                         setUserDropdownOpen(false);
                         navigate(defaultDashboard || '/client');
                       }}
-                      className="w-full text-left px-3 py-2 text-amber-400 hover:bg-gray-800 font-semibold transition cursor-pointer flex items-center justify-between"
+                      className="w-full text-start px-3 py-2 text-amber-400 hover:bg-gray-800 font-semibold transition cursor-pointer flex items-center justify-between"
                     >
-                      <span>{isAdmin ? 'Console Admin' : isEmploye ? 'Planning Barbier' : 'Espace Réservations'}</span>
+                      <span>
+                        {isAdmin ? t.nav.adminConsole : isEmploye ? t.nav.barberSchedule : t.nav.clientDashboard}
+                      </span>
                       <span>→</span>
                     </button>
                     <button
@@ -148,7 +132,7 @@ export default function LandingNavbar({
                         setUserDropdownOpen(false);
                         onOpenAuth('profile');
                       }}
-                      className="w-full text-left px-3 py-2 text-gray-300 hover:bg-gray-800 hover:text-white transition cursor-pointer"
+                      className="w-full text-start px-3 py-2 text-gray-300 hover:bg-gray-800 hover:text-white transition cursor-pointer"
                     >
                       {t.nav.myAccount}
                     </button>
@@ -157,9 +141,9 @@ export default function LandingNavbar({
                         setUserDropdownOpen(false);
                         logout();
                       }}
-                      className="w-full text-left px-3 py-2 text-red-400 hover:bg-red-950/30 transition cursor-pointer"
+                      className="w-full text-start px-3 py-2 text-red-400 hover:bg-red-950/30 transition cursor-pointer"
                     >
-                      Déconnexion
+                      {t.nav.logout}
                     </button>
                   </div>
                 )}
@@ -197,12 +181,7 @@ export default function LandingNavbar({
           {/* Mobile Menu Button */}
           <div className="flex items-center gap-2 sm:hidden">
             {/* Lang switcher on mobile */}
-            <button
-              onClick={() => onToggleLang(lang === 'fr' ? 'ar' : 'fr')}
-              className="text-xs font-bold px-2 py-1 bg-gray-900 border border-gray-800 text-amber-400 rounded-lg"
-            >
-              {lang === 'fr' ? 'AR' : 'FR'}
-            </button>
+            <LanguageSwitcher variant="toggle" />
 
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -223,34 +202,38 @@ export default function LandingNavbar({
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
         <div className="sm:hidden bg-gray-950/95 border-b border-gray-800 px-4 pt-3 pb-5 space-y-3">
+          <div className="flex justify-center pb-2 border-b border-gray-800/80">
+            <LanguageSwitcher variant="pills" className="w-full justify-center py-1" />
+          </div>
+
           <div className="flex flex-col space-y-2 text-sm font-semibold">
             <button
               onClick={() => scrollTo('services')}
-              className="text-left text-gray-300 hover:text-amber-400 py-1.5"
+              className="text-start text-gray-300 hover:text-amber-400 py-1.5"
             >
               {t.nav.services}
             </button>
             <button
               onClick={() => scrollTo('barbers')}
-              className="text-left text-gray-300 hover:text-amber-400 py-1.5"
+              className="text-start text-gray-300 hover:text-amber-400 py-1.5"
             >
               {t.nav.barbers}
             </button>
             <button
               onClick={() => scrollTo('lookbook')}
-              className="text-left text-gray-300 hover:text-amber-400 py-1.5"
+              className="text-start text-gray-300 hover:text-amber-400 py-1.5"
             >
               {t.nav.lookbook}
             </button>
             <button
               onClick={() => scrollTo('testimonials')}
-              className="text-left text-gray-300 hover:text-amber-400 py-1.5"
+              className="text-start text-gray-300 hover:text-amber-400 py-1.5"
             >
               {t.nav.testimonials}
             </button>
             <button
               onClick={() => scrollTo('contact')}
-              className="text-left text-gray-300 hover:text-amber-400 py-1.5"
+              className="text-start text-gray-300 hover:text-amber-400 py-1.5"
             >
               {t.nav.contact}
             </button>
@@ -259,15 +242,15 @@ export default function LandingNavbar({
           <div className="pt-3 border-t border-gray-800 flex flex-col gap-2.5">
             {isAuthenticated ? (
               <div className="flex items-center justify-between text-xs text-gray-300">
-                <span>Connecté : {user?.name}</span>
+                <span>{t.nav.connectedAs} : <strong className="text-white">{user?.name}</strong></span>
                 <button
                   onClick={() => {
                     setMobileMenuOpen(false);
                     logout();
                   }}
-                  className="text-red-400 underline"
+                  className="text-red-400 hover:text-red-300 underline cursor-pointer"
                 >
-                  Déconnexion
+                  {t.nav.logout}
                 </button>
               </div>
             ) : (

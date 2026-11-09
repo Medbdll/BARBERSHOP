@@ -7,7 +7,7 @@ import LookbookGallery from './LookbookGallery';
 import TestimonialsSection from './TestimonialsSection';
 import FooterSection from './FooterSection';
 import BookingModal from './BookingModal';
-import { translations } from '../../data/translations';
+import { useLanguage } from '../../context/LanguageContext';
 import {
   getServices,
   getBarbers,
@@ -16,7 +16,7 @@ import {
 } from '../../api/barberApi';
 
 export default function LandingPage({ onOpenAuth }) {
-  const [lang, setLang] = useState('fr'); // 'fr' | 'ar'
+  const { lang, setLang, t, dir } = useLanguage();
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
   const [selectedBarber, setSelectedBarber] = useState(null);
@@ -27,8 +27,6 @@ export default function LandingPage({ onOpenAuth }) {
   const [reviews, setReviews] = useState([]);
   const [gallery, setGallery] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  const t = translations[lang] || translations.fr;
 
   useEffect(() => {
     let ignore = false;

@@ -4,6 +4,7 @@ import LuxuryInput from './LuxuryInput';
 import GoogleAuthButton from './GoogleAuthButton';
 import { MailIcon, LockIcon } from './AuthIcons';
 import { useAuth } from '../../context/useAuth';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function LuxuryLoginForm({
   onSwitchToRegister,
@@ -11,6 +12,7 @@ export default function LuxuryLoginForm({
   onSuccess,
 }) {
   const { login } = useAuth();
+  const { t, isRtl } = useLanguage();
   const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -54,13 +56,10 @@ export default function LuxuryLoginForm({
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-          <span>Connexion VIP</span>
-          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
-            Espace Client
-          </span>
+          <span>{t.auth.login.title}</span>
         </h2>
         <p className="mt-1.5 text-sm text-gray-400">
-          Entrez vos identifiants pour gérer vos rituels et réservations.
+          {t.auth.login.subtitle}
         </p>
       </div>
 
@@ -75,13 +74,13 @@ export default function LuxuryLoginForm({
       )}
 
       {/* Google OAuth Button */}
-      <GoogleAuthButton text="Continuer avec Google" onError={(msg) => setError(msg)} />
+      <GoogleAuthButton text={t.auth.login.googleBtn} onError={(msg) => setError(msg)} />
 
       {/* Luxury Divider */}
       <div className="relative flex items-center justify-center">
         <div className="w-full border-t border-gray-800"></div>
         <span className="absolute px-3 bg-[#111827] text-xs font-medium uppercase tracking-wider text-gray-500">
-          ou avec votre email
+          {t.auth.login.emailLabel}
         </span>
       </div>
 
@@ -89,24 +88,24 @@ export default function LuxuryLoginForm({
       <form onSubmit={handleSubmit} className="space-y-4">
         <LuxuryInput
           id="login_email"
-          label="Adresse e-mail"
+          label={t.auth.login.emailLabel}
           type="email"
           icon={MailIcon}
           required
           autoComplete="email"
-          placeholder="votre.email@exemple.com"
+          placeholder={t.auth.login.emailPlaceholder}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
 
         <LuxuryInput
           id="login_password"
-          label="Mot de passe"
+          label={t.auth.login.passwordLabel}
           type="password"
           icon={LockIcon}
           required
           autoComplete="current-password"
-          placeholder="••••••••"
+          placeholder={t.auth.login.passwordPlaceholder}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
@@ -121,7 +120,7 @@ export default function LuxuryLoginForm({
               onChange={(e) => setRemember(e.target.checked)}
               className="rounded bg-gray-950/80 border-gray-700 text-amber-600 focus:ring-amber-500/30 w-4 h-4 accent-amber-600 cursor-pointer"
             />
-            <span className="text-gray-300">Se souvenir de moi</span>
+            <span className="text-gray-300">{t.auth.login.rememberMe}</span>
           </label>
 
           {onSwitchToForgotPassword && (
@@ -130,7 +129,7 @@ export default function LuxuryLoginForm({
               onClick={onSwitchToForgotPassword}
               className="font-medium text-amber-500 hover:text-amber-400 hover:underline transition-colors cursor-pointer"
             >
-              Mot de passe oublié ?
+              {t.auth.login.forgotPassword}
             </button>
           )}
         </div>
@@ -147,12 +146,14 @@ export default function LuxuryLoginForm({
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
               </svg>
-              <span>Connexion en cours...</span>
+              <span>{t.auth.login.submittingBtn}</span>
             </>
           ) : (
             <>
-              <span>Se connecter</span>
-              <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
+              <span>{t.auth.login.submitBtn}</span>
+              <span className={`transition-transform duration-200 ${isRtl ? 'group-hover:-translate-x-1' : 'group-hover:translate-x-1'}`}>
+                {isRtl ? '←' : '→'}
+              </span>
             </>
           )}
         </button>
@@ -161,13 +162,13 @@ export default function LuxuryLoginForm({
       {/* Switch to Register link */}
       {onSwitchToRegister && (
         <div className="pt-2 text-center text-xs text-gray-400">
-          Nouveau parmi nos clients ?{' '}
+          {t.auth.login.noAccount}{' '}
           <button
             type="button"
             onClick={onSwitchToRegister}
             className="font-semibold text-amber-400 hover:text-amber-300 hover:underline cursor-pointer transition-colors"
           >
-            Créer un compte client
+            {t.auth.login.registerLink}
           </button>
         </div>
       )}

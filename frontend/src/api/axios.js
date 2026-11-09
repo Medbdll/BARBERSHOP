@@ -11,13 +11,19 @@ const api = axios.create({
   timeout: 10000,
 });
 
-// Request Interceptor: Attach Bearer token if user is authenticated
+// Request Interceptor: Attach Bearer token & active language to every request
 api.interceptors.request.use(
   (config) => {
+    // 1. Attach Auth token if present
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // 2. Attach active application language from localStorage (FR | AR)
+    const lang = localStorage.getItem('app_lang') || 'fr';
+    config.headers['Accept-Language'] = lang;
+
     return config;
   },
   (error) => {

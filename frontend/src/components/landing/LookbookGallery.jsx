@@ -36,7 +36,13 @@ export default function LookbookGallery({
           {sourceGallery.map((item, index) => {
             const title = item.title || (lang === 'ar' ? item.titleAr : item.titleFr);
             const image = item.image_url || item.image;
-            const category = item.category || 'Lookbook';
+            const categoryMap = {
+              'Coupe & Barbe': t.lookbook.categories?.hairBeard || 'Coupe & Barbe',
+              'Barbe Prestige': t.lookbook.categories?.beardPrestige || 'Barbe Prestige',
+              'Rituel Ancien': t.lookbook.categories?.ancientRitual || 'Rituel Ancien',
+              'Tendance 2026': t.lookbook.categories?.trend2026 || 'Tendance 2026',
+            };
+            const category = categoryMap[item.category] || (lang === 'ar' ? (item.categoryAr || 'معرض الصور') : (item.category || 'Lookbook'));
             const colSpan = item.colSpan || (index === 0 || index === 3 ? 'md:col-span-2' : 'md:col-span-1');
 
             return (

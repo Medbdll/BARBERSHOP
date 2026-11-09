@@ -1,10 +1,13 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
+import { useLanguage } from '../../context/LanguageContext';
 import BrandLogo from '../common/BrandLogo';
+import LanguageSwitcher from '../common/LanguageSwitcher';
 
 export default function DashboardLayout({ title, subtitle, children, navItems = [] }) {
   const { user, logout, isAdmin, isEmploye, isClient } = useAuth();
+  const { t, lang, dir } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -49,7 +52,11 @@ export default function DashboardLayout({ title, subtitle, children, navItems = 
               >
                 <BrandLogo className="h-12 sm:h-13" />
                 <span className="hidden sm:inline-block text-[10px] text-amber-500/80 tracking-widest uppercase font-semibold pl-2 border-l border-gray-800">
-                  {isAdmin ? 'Manager Suite' : isEmploye ? 'Barbier Pro' : 'Espace VIP'}
+                  {isAdmin
+                    ? (lang === 'ar' ? 'لوحة تحكم المدير' : 'Manager Suite')
+                    : isEmploye
+                    ? (lang === 'ar' ? 'فضاء الحلاق' : 'Barbier Pro')
+                    : (lang === 'ar' ? 'فضاء الزبون VIP' : 'Espace VIP')}
                 </span>
               </Link>
 
@@ -64,7 +71,7 @@ export default function DashboardLayout({ title, subtitle, children, navItems = 
                     <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
-                    Site public
+                    {lang === 'ar' ? 'الموقع الرئيسي' : 'Site public'}
                   </Link>
                 </>
               )}
@@ -72,6 +79,9 @@ export default function DashboardLayout({ title, subtitle, children, navItems = 
 
             {/* User Profile & Actions */}
             <div className="flex items-center gap-3">
+              {/* Language Switcher */}
+              <LanguageSwitcher variant="toggle" className="hidden sm:inline-flex" />
+
               {/* Role badge */}
               <div className="hidden md:block">
                 {getRoleBadge()}
@@ -83,7 +93,7 @@ export default function DashboardLayout({ title, subtitle, children, navItems = 
                   <svg className="w-3.5 h-3.5 text-amber-400 fill-amber-400" viewBox="0 0 20 20">
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                   </svg>
-                  <span>{user?.loyalty_points ?? 0} pts</span>
+                  <span>{user?.loyalty_points ?? 0} {t.common?.points || 'pts'}</span>
                 </div>
               )}
 
@@ -106,8 +116,8 @@ export default function DashboardLayout({ title, subtitle, children, navItems = 
               <button
                 type="button"
                 onClick={handleLogout}
-                className="ml-2 p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                title="Se déconnecter"
+                className="ml-2 p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+                title={t.nav.logout}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />

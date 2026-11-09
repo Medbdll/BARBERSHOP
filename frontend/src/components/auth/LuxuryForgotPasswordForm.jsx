@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import LuxuryInput from './LuxuryInput';
 import { MailIcon } from './AuthIcons';
 import { forgotPassword } from '../../api/barberApi';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function LuxuryForgotPasswordForm({ onSwitchToLogin }) {
+  const { t, isRtl } = useLanguage();
   const [email, setEmail] = useState('');
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState(null);
@@ -17,7 +19,7 @@ export default function LuxuryForgotPasswordForm({ onSwitchToLogin }) {
 
     try {
       const res = await forgotPassword({ email });
-      setStatus(res.message || 'Un lien de réinitialisation vous a été envoyé par e-mail.');
+      setStatus(res.message || t.auth.forgot.successMsg);
     } catch (err) {
       console.error('Password reset failed:', err);
       if (err.response?.data?.errors?.email) {
@@ -36,13 +38,10 @@ export default function LuxuryForgotPasswordForm({ onSwitchToLogin }) {
     <div className="space-y-6 animate-fadeIn">
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-          <span>Mot de passe oublié</span>
-          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
-            Sécurité
-          </span>
+          <span>{t.auth.forgot.title}</span>
         </h2>
         <p className="mt-1.5 text-xs text-gray-400 leading-relaxed">
-          Indiquez votre adresse e-mail associée à votre compte. Nous vous enverrons un lien d'accès pour définir un nouveau mot de passe.
+          {t.auth.forgot.subtitle}
         </p>
       </div>
 
@@ -63,12 +62,12 @@ export default function LuxuryForgotPasswordForm({ onSwitchToLogin }) {
       <form onSubmit={handleSubmit} className="space-y-4">
         <LuxuryInput
           id="reset_email"
-          label="Adresse e-mail du compte"
+          label={t.auth.forgot.emailLabel}
           type="email"
           icon={MailIcon}
           required
           autoComplete="email"
-          placeholder="votre.email@exemple.com"
+          placeholder={t.auth.forgot.emailPlaceholder}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
@@ -84,10 +83,10 @@ export default function LuxuryForgotPasswordForm({ onSwitchToLogin }) {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
               </svg>
-              <span>Envoi du lien...</span>
+              <span>{t.auth.forgot.submittingBtn}</span>
             </>
           ) : (
-            <span>Envoyer le lien de réinitialisation</span>
+            <span>{t.auth.forgot.submitBtn}</span>
           )}
         </button>
       </form>
@@ -99,8 +98,7 @@ export default function LuxuryForgotPasswordForm({ onSwitchToLogin }) {
             onClick={onSwitchToLogin}
             className="font-semibold text-amber-400 hover:text-amber-300 hover:underline cursor-pointer transition-colors flex items-center justify-center gap-1.5 mx-auto"
           >
-            <span>←</span>
-            <span>Retour à la connexion</span>
+            <span>{t.auth.forgot.backToLogin}</span>
           </button>
         </div>
       )}

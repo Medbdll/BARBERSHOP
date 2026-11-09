@@ -42,40 +42,14 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
 }
 
-/* Arabic typography support */
+/* Arabic typography & RTL adaptations */
 [dir="rtl"], [dir="rtl"] * {
-  font-family: 'Cinzel', 'Playfair Display', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   letter-spacing: 0;
 }
 
-/* ==========================================================================
-   Modern Luxury Logo Hover Effects
-   ========================================================================== */
-@keyframes logoSheenSweep {
-  0% {
-    transform: translateX(-160%) skewX(-25deg);
-    opacity: 0;
-  }
-  20% {
-    opacity: 0.9;
-  }
-  60% {
-    opacity: 0.9;
-  }
-  100% {
-    transform: translateX(320%) skewX(-25deg);
-    opacity: 0;
-  }
-}
-
-.logo-sheen-beam {
-  opacity: 0;
-  pointer-events: none;
-  will-change: transform, opacity;
-}
-
-/* Trigger sheen on hover of either the logo container or any parent .group */
-.group:hover .logo-sheen-beam,
-.group\/logo:hover .logo-sheen-beam {
-  animation: logoSheenSweep 1.15s cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
+[dir="rtl"] .tracking-widest,
+[dir="rtl"] .tracking-wider,
+[dir="rtl"] .tracking-tight {
+  letter-spacing: normal;
 }
