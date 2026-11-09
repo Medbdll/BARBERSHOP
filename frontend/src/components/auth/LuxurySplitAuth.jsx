@@ -7,6 +7,8 @@ import LuxuryUserProfile from './LuxuryUserProfile';
 import { ScissorsIcon, GoldStarIcon } from './AuthIcons';
 import { useAuth } from '../../context/useAuth';
 import BrandLogo from '../common/BrandLogo';
+import LanguageSwitcher from '../common/LanguageSwitcher';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function LuxurySplitAuth({
   initialMode = 'login',
@@ -15,6 +17,7 @@ export default function LuxurySplitAuth({
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, isAdmin, isEmploye, loading: authLoading, defaultDashboard } = useAuth();
+  const { t, isRtl } = useLanguage();
   
   const startingMode = location.state?.initialMode || initialMode;
   const [mode, setMode] = useState(startingMode); // 'login' | 'register' | 'forgot-password'
@@ -99,28 +102,28 @@ export default function LuxurySplitAuth({
         {/* Middle: Brand Narrative & Key Values */}
         <div className="relative z-10 my-8 lg:my-0 space-y-5 max-w-lg">
           <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
-            <span>✨</span> L'Expérience Masculine par Excellence
+            <span>✨</span> {t.auth.badge}
           </div>
 
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white leading-tight">
-            L'élégance d'une coupe taillée pour{' '}
+            {t.auth.heroHeadline}{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-amber-600">
-              votre signature
+              {t.auth.heroHeadlineHighlight}
             </span>.
           </h1>
 
           <p className="text-sm text-gray-300/90 leading-relaxed">
-            De la taille de barbe au rasoir traditionnel aux rituels de serviette chaude, réservez vos séances avec votre barbier attitré en toute simplicité.
+            {t.hero.description}
           </p>
 
           <div className="grid grid-cols-2 gap-3 pt-2 text-xs text-gray-300">
             <div className="flex items-center gap-2 bg-gray-900/60 p-2.5 rounded-xl border border-gray-800">
               <span className="text-amber-400">⏱</span>
-              <span>Rappels SMS 2h avant</span>
+              <span>{t.footer.smsNote}</span>
             </div>
             <div className="flex items-center gap-2 bg-gray-900/60 p-2.5 rounded-xl border border-gray-800">
               <span className="text-amber-400">⭐</span>
-              <span>Barbiers d'Élite Notés 4.9</span>
+              <span>{t.auth.values.barbers}</span>
             </div>
           </div>
         </div>
@@ -133,22 +136,22 @@ export default function LuxurySplitAuth({
               {[...Array(5)].map((_, i) => (
                 <GoldStarIcon key={i} className="w-3.5 h-3.5" />
               ))}
-              <span className="ml-2 text-[11px] font-bold text-amber-400">Avis Vérifié</span>
+              <span className="ml-2 text-[11px] font-bold text-amber-400">{t.testimonials.verified}</span>
             </div>
 
             {/* Quote text */}
             <p className="text-xs sm:text-sm text-gray-200 italic leading-relaxed">
-              « L'art de la précision et le rituel d'antan réunis avec raffinement. Une coupe impeccable, un accueil chaleureux et une ponctualité sans faille grâce aux rappels SMS. »
+              {t.auth.testimonial}
             </p>
 
             {/* Author info */}
             <div className="mt-3 pt-3 border-t border-gray-800 flex items-center justify-between text-xs">
               <div>
-                <p className="font-bold text-white">Alexandre de Montmirail</p>
-                <p className="text-[11px] text-gray-400">Client Membre Privilège — Club Barber</p>
+                <p className="font-bold text-white">{t.auth.testimonialAuthor}</p>
+                <p className="text-[11px] text-gray-400">{t.auth.testimonialRole}</p>
               </div>
               <span className="text-[10px] text-amber-500 font-mono tracking-wider">
-                PARIS • 2024
+                2026
               </span>
             </div>
           </div>
@@ -167,12 +170,17 @@ export default function LuxurySplitAuth({
               onClick={onBackToShop}
               className="inline-flex items-center gap-2 text-xs font-semibold text-gray-400 hover:text-amber-400 transition-colors cursor-pointer group"
             >
-              <span className="transition-transform group-hover:-translate-x-1">←</span>
-              <span>Retour au salon</span>
+              <span className={`transition-transform ${isRtl ? 'group-hover:translate-x-1' : 'group-hover:-translate-x-1'}`}>
+                {isRtl ? '→' : '←'}
+              </span>
+              <span>{t.auth.backToShop}</span>
             </button>
           ) : (
-            <div></div>
+            <div />
           )}
+
+          {/* Language Switcher */}
+          <LanguageSwitcher variant="pills" />
 
           {/* Toggle pill between "Connexion" and "Inscription" */}
           {!isAuthenticated && activeMode !== 'forgot-password' && (
@@ -186,7 +194,7 @@ export default function LuxurySplitAuth({
                     : 'text-gray-400 hover:text-gray-200'
                 }`}
               >
-                Connexion
+                {t.nav.login}
               </button>
               <button
                 type="button"
@@ -197,7 +205,7 @@ export default function LuxurySplitAuth({
                     : 'text-gray-400 hover:text-gray-200'
                 }`}
               >
-                Inscription
+                {t.nav.signup}
               </button>
             </div>
           )}

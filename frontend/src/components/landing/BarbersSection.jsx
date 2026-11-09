@@ -40,7 +40,8 @@ export default function BarbersSection({
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
             {sourceBarbers.map((barber) => {
-              const title = lang === 'ar' ? (barber.titleAr || barber.experience || 'حلاق محترف') : (barber.titleFr || barber.experience || 'Maître Barbier');
+              const defaultTitle = t.barbers.defaultTitle || (lang === 'ar' ? 'حلاق محترف' : 'Maître Barbier');
+              const title = lang === 'ar' ? (barber.titleAr || barber.experience || defaultTitle) : (barber.titleFr || barber.experience || defaultTitle);
               const specialty = lang === 'ar' ? (barber.specialtyAr || barber.specialty) : (barber.specialtyFr || barber.specialty);
               const imageUrl = barber.image_url || barber.image;
 

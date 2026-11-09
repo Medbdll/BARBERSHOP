@@ -13,8 +13,13 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
+
 Route::get('/', function () {
-    return view('welcome');
+    return redirect(config('app.frontend_url', 'https://barberoza.shop'));
+});
+
+Route::fallback(function () {
+    return response()->json(['message' => 'Not Found'], 404);
 });
 
 Route::middleware([

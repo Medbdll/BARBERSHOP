@@ -50,7 +50,9 @@ export default function TestimonialsSection({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
             {sourceReviews.map((review) => {
               const clientName = review.client_name || review.author;
-              const barberName = review.barber_name ? `Soigné par ${review.barber_name}` : (review.service || 'Client Privilège');
+              const groomedByText = t.testimonials.groomedBy || (lang === 'ar' ? 'اعتنى به' : 'Soigné par');
+              const vipClientText = t.testimonials.vipClient || (lang === 'ar' ? 'زبون مميز VIP' : 'Client Privilège VIP');
+              const barberName = review.barber_name ? `${groomedByText} ${review.barber_name}` : (review.service || vipClientText);
               const avatar = review.client_avatar || review.avatar;
               const rating = review.rating || 5;
               const quote = review.comment || (lang === 'ar' ? review.quoteAr : review.quoteFr);

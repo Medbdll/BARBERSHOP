@@ -64,7 +64,7 @@ export default function HeroSection({ t, onOpenBooking, onExploreServices }) {
             {/* Stat 1 */}
             <div className="p-3 text-center border-b sm:border-b-0 sm:border-r border-gray-800/80">
               <div className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-600">
-                15 000+
+                15000+
               </div>
               <div className="text-xs text-gray-400 mt-1 font-medium">
                 {t.hero.stats.clients}
@@ -74,7 +74,7 @@ export default function HeroSection({ t, onOpenBooking, onExploreServices }) {
             {/* Stat 2 */}
             <div className="p-3 text-center border-b sm:border-b-0 md:border-r border-gray-800/80">
               <div className="text-2xl sm:text-3xl font-black text-white">
-                48 000+
+                48000+
               </div>
               <div className="text-xs text-gray-400 mt-1 font-medium">
                 {t.hero.stats.cuts}
@@ -95,7 +95,7 @@ export default function HeroSection({ t, onOpenBooking, onExploreServices }) {
             {/* Stat 4 */}
             <div className="p-3 text-center">
               <div className="text-2xl sm:text-3xl font-black text-white">
-                8 Experts
+                {t.hero.stats.barbersCount}
               </div>
               <div className="text-xs text-gray-400 mt-1 font-medium">
                 {t.hero.stats.barbers}

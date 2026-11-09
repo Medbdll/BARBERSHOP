@@ -1,6 +1,7 @@
 import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { useAuth } from './context/useAuth';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import './App.css';
@@ -14,17 +15,18 @@ const AdminPortal = React.lazy(() => import('./components/admin/AdminPortal'));
 const GoogleCallback = React.lazy(() => import('./components/auth/GoogleCallback'));
 
 function LuxuryPageFallback() {
+  const isAr = typeof window !== 'undefined' && localStorage.getItem('app_lang') === 'ar';
   return (
-    <div className="min-h-screen bg-[#0F141C] flex flex-col items-center justify-center p-6 text-center select-none">
+    <div className="min-h-screen bg-[#0F141C] flex flex-col items-center justify-center p-6 text-center select-none" dir={isAr ? 'rtl' : 'ltr'}>
       <div className="relative w-16 h-16 mb-4">
         <div className="absolute inset-0 rounded-full border-2 border-amber-500/20 animate-ping"></div>
         <div className="absolute inset-0 rounded-full border-2 border-t-amber-500 border-r-amber-500/40 border-b-transparent border-l-transparent animate-spin"></div>
       </div>
       <div className="text-amber-400 font-serif font-bold text-sm tracking-widest uppercase mb-1">
-        BERBER PRESTIGE
+        {isAr ? 'باربيروزا بريستيج' : 'BARBEROZA PRESTIGE'}
       </div>
       <p className="text-gray-400 text-xs font-sans">
-        Chargement de l’interface sécurisée...
+        {isAr ? 'جاري تحميل المنصة الآمنة...' : 'Chargement de l’interface sécurisée...'}
       </p>
     </div>
   );
@@ -88,58 +90,60 @@ function FallbackRedirect() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Suspense fallback={<LuxuryPageFallback />}>
-          <Routes>
-            {/* Public Landing Page */}
-            <Route path="/" element={<LandingPageWrapper />} />
+    <LanguageProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <Suspense fallback={<LuxuryPageFallback />}>
+            <Routes>
+              {/* Public Landing Page */}
+              <Route path="/" element={<LandingPageWrapper />} />
 
-            {/* Authentication Split Screen (Login & Register) */}
-            <Route path="/auth" element={<AuthPageWrapper initialMode="login" />} />
-            <Route path="/login" element={<AuthPageWrapper initialMode="login" />} />
-            <Route path="/register" element={<AuthPageWrapper initialMode="register" />} />
+              {/* Authentication Split Screen (Login & Register) */}
+              <Route path="/auth" element={<AuthPageWrapper initialMode="login" />} />
+              <Route path="/login" element={<AuthPageWrapper initialMode="login" />} />
+              <Route path="/register" element={<AuthPageWrapper initialMode="register" />} />
 
-            {/* Google OAuth2 Stateless Callback */}
-            <Route path="/auth/google/callback" element={<GoogleCallback />} />
+              {/* Google OAuth2 Stateless Callback */}
+              <Route path="/auth/google/callback" element={<GoogleCallback />} />
 
-            {/* Role-Based Protected Routes */}
+              {/* Role-Based Protected Routes */}
 
-            {/* 1. Client Privilège Portal (role: client) */}
-            <Route
-              path="/client/*"
-              element={
-                <ProtectedRoute allowedRoles={['client']}>
-                  <ClientPortal />
-                </ProtectedRoute>
-              }
-            />
+              {/* 1. Client Privilège Portal (role: client) */}
+              <Route
+                path="/client/*"
+                element={
+                  <ProtectedRoute allowedRoles={['client']}>
+                    <ClientPortal />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* 2. Employé / Barber Portal (role: employe) */}
-            <Route
-              path="/employe/*"
-              element={
-                <ProtectedRoute allowedRoles={['employe']}>
-                  <EmployePortal />
-                </ProtectedRoute>
-              }
-            />
+              {/* 2. Employé / Barber Portal (role: employe) */}
+              <Route
+                path="/employe/*"
+                element={
+                  <ProtectedRoute allowedRoles={['employe']}>
+                    <EmployePortal />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* 3. Super Admin Portal (role: admin) */}
-            <Route
-              path="/admin/*"
-              element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <AdminPortal />
-                </ProtectedRoute>
-              }
-            />
+              {/* 3. Super Admin Portal (role: admin) */}
+              <Route
+                path="/admin/*"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <AdminPortal />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Fallback */}
-            <Route path="*" element={<FallbackRedirect />} />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
-    </AuthProvider>
+              {/* Fallback */}
+              <Route path="*" element={<FallbackRedirect />} />
+            </Routes>
+          </Suspense>
+        </BrowserRouter>
+      </AuthProvider>
+    </LanguageProvider>
   );
 }

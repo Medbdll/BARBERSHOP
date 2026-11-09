@@ -246,36 +246,36 @@ export default function BookingModal({
               ✓
             </div>
 
-            <h3 className="text-2xl font-bold text-white">Rendez-vous Confirmé !</h3>
+            <h3 className="text-2xl font-bold text-white">{t.bookingModal.successTitle}</h3>
             <p className="text-sm text-gray-300 max-w-md mx-auto leading-relaxed">
-              Votre réservation #{confirmedData.appointment?.id} a été enregistrée avec succès. Un SMS de confirmation et rappel automatique sera envoyé à votre numéro.
+              {t.bookingModal.successMsg}
             </p>
 
-            <div className="bg-gray-950 p-4 rounded-xl border border-gray-800 text-xs text-left space-y-2 mt-4">
+            <div className="bg-gray-950 p-4 rounded-xl border border-gray-800 text-xs text-start space-y-2 mt-4">
               <div className="flex justify-between">
-                <span className="text-gray-400">Prestation :</span>
+                <span className="text-gray-400">{t.bookingModal.summaryService}</span>
                 <span className="font-bold text-white">{confirmedData.service?.name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Maître Barbier :</span>
+                <span className="text-gray-400">{t.bookingModal.summaryBarber}</span>
                 <span className="font-bold text-amber-400">{confirmedData.barber?.name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Date & Heure :</span>
+                <span className="text-gray-400">{t.bookingModal.summaryDateTime}</span>
                 <span className="font-mono text-white font-bold">
                   {confirmedData.date} à {confirmedData.slot}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Tarif au salon :</span>
+                <span className="text-gray-400">{t.bookingModal.summaryPrice}</span>
                 <span className="font-mono text-amber-400 font-bold">
-                  {confirmedData.service?.price} {confirmedData.service?.currency || 'MAD'}
+                  {confirmedData.service?.price} {t.common?.currency || confirmedData.service?.currency || 'MAD'}
                 </span>
               </div>
               {confirmedData.pointsEarned && (
                 <div className="flex justify-between pt-2 border-t border-gray-800 text-emerald-400 font-medium">
-                  <span>Points fidélité crédités :</span>
-                  <span>+{confirmedData.pointsEarned} pts (Total: {confirmedData.totalPoints})</span>
+                  <span>{t.bookingModal.summaryPoints}</span>
+                  <span>+{confirmedData.pointsEarned} {t.common?.points || 'pts'} (Total: {confirmedData.totalPoints})</span>
                 </div>
               )}
             </div>
@@ -289,14 +289,14 @@ export default function BookingModal({
                 }}
                 className="flex-1 py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-wider text-gray-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 transition shadow cursor-pointer text-center"
               >
-                Gérer mes Rendez-vous →
+                {t.bookingModal.manageAppointments}
               </button>
               <button
                 type="button"
                 onClick={handleClose}
                 className="py-3 px-5 rounded-xl text-xs font-semibold text-gray-300 hover:text-white bg-gray-800 hover:bg-gray-700 transition"
               >
-                Fermer
+                {t.bookingModal.close}
               </button>
             </div>
           </div>
@@ -306,10 +306,10 @@ export default function BookingModal({
             <div className="flex items-center justify-between pb-3 border-b border-gray-800">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400">
-                  Réservation Privilège
+                  {t.bookingModal.authBadge}
                 </span>
                 <h3 className="text-lg font-bold text-white">
-                  {authTab === 'login' ? 'Connexion Client' : 'Inscription Rapide'}
+                  {authTab === 'login' ? t.bookingModal.authLoginTitle : t.bookingModal.authRegisterTitle}
                 </h3>
               </div>
               <div className="flex gap-2">
@@ -320,7 +320,7 @@ export default function BookingModal({
                     authTab === 'login' ? 'bg-amber-500 text-gray-950 font-bold' : 'text-gray-400'
                   }`}
                 >
-                  Connexion
+                  {t.nav.login}
                 </button>
                 <button
                   type="button"
@@ -329,7 +329,7 @@ export default function BookingModal({
                     authTab === 'register' ? 'bg-amber-500 text-gray-950 font-bold' : 'text-gray-400'
                   }`}
                 >
-                  Inscription
+                  {t.nav.signup}
                 </button>
               </div>
             </div>
@@ -347,24 +347,24 @@ export default function BookingModal({
             {authTab === 'login' ? (
               <form onSubmit={handleQuickLogin} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-300 mb-1">E-mail</label>
+                  <label className="block text-xs font-medium text-gray-300 mb-1">{t.auth.login.emailLabel}</label>
                   <input
                     type="email"
                     required
                     value={authEmail}
                     onChange={(e) => setAuthEmail(e.target.value)}
-                    placeholder="client@barbershop.ma"
+                    placeholder={t.auth.login.emailPlaceholder}
                     className="w-full px-3.5 py-2 bg-gray-950 border border-gray-700 rounded-xl text-white text-xs outline-none focus:border-amber-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-300 mb-1">Mot de passe</label>
+                  <label className="block text-xs font-medium text-gray-300 mb-1">{t.auth.login.passwordLabel}</label>
                   <input
                     type="password"
                     required
                     value={authPassword}
                     onChange={(e) => setAuthPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder={t.auth.login.passwordPlaceholder}
                     className="w-full px-3.5 py-2 bg-gray-950 border border-gray-700 rounded-xl text-white text-xs outline-none focus:border-amber-500"
                   />
                 </div>
@@ -374,61 +374,61 @@ export default function BookingModal({
                     onClick={() => setAuthTab('booking')}
                     className="flex-1 py-2 text-xs text-gray-400 hover:text-white"
                   >
-                    ← Revenir au formulaire
+                    {t.bookingModal.authBackToBooking}
                   </button>
                   <button
                     type="submit"
                     disabled={authSubmitting}
                     className="flex-1 py-2.5 rounded-xl bg-amber-500 text-gray-950 font-bold text-xs uppercase hover:bg-amber-400 transition"
                   >
-                    {authSubmitting ? 'Connexion...' : 'Se connecter & Réserver'}
+                    {authSubmitting ? t.common.loading : t.bookingModal.authSubmitLogin}
                   </button>
                 </div>
               </form>
             ) : (
               <form onSubmit={handleQuickRegister} className="space-y-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-300 mb-1">Nom complet</label>
+                  <label className="block text-xs font-medium text-gray-300 mb-1">{t.auth.register.nameLabel}</label>
                   <input
                     type="text"
                     required
                     value={clientName}
                     onChange={(e) => setClientName(e.target.value)}
-                    placeholder="Youssef Alami"
+                    placeholder={t.auth.register.namePlaceholder}
                     className="w-full px-3.5 py-2 bg-gray-950 border border-gray-700 rounded-xl text-white text-xs outline-none focus:border-amber-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-300 mb-1">E-mail</label>
+                  <label className="block text-xs font-medium text-gray-300 mb-1">{t.auth.register.emailLabel}</label>
                   <input
                     type="email"
                     required
                     value={authEmail}
                     onChange={(e) => setAuthEmail(e.target.value)}
-                    placeholder="votre.email@domaine.com"
+                    placeholder={t.auth.register.emailPlaceholder}
                     className="w-full px-3.5 py-2 bg-gray-950 border border-gray-700 rounded-xl text-white text-xs outline-none focus:border-amber-500"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-xs font-medium text-gray-300 mb-1">Téléphone portable</label>
+                    <label className="block text-xs font-medium text-gray-300 mb-1">{t.auth.register.phoneLabel}</label>
                     <input
                       type="tel"
                       required
                       value={clientPhone}
                       onChange={(e) => setClientPhone(e.target.value)}
-                      placeholder="+212 6 XX XX XX XX"
+                      placeholder={t.auth.register.phonePlaceholder}
                       className="w-full px-3.5 py-2 bg-gray-950 border border-gray-700 rounded-xl text-white text-xs outline-none focus:border-amber-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-300 mb-1">Mot de passe</label>
+                    <label className="block text-xs font-medium text-gray-300 mb-1">{t.auth.register.passwordLabel}</label>
                     <input
                       type="password"
                       required
                       value={authPassword}
                       onChange={(e) => setAuthPassword(e.target.value)}
-                      placeholder="••••••••"
+                      placeholder={t.auth.register.passwordPlaceholder}
                       className="w-full px-3.5 py-2 bg-gray-950 border border-gray-700 rounded-xl text-white text-xs outline-none focus:border-amber-500"
                     />
                   </div>
@@ -439,14 +439,14 @@ export default function BookingModal({
                     onClick={() => setAuthTab('booking')}
                     className="flex-1 py-2 text-xs text-gray-400 hover:text-white"
                   >
-                    ← Revenir au formulaire
+                    {t.bookingModal.authBackToBooking}
                   </button>
                   <button
                     type="submit"
                     disabled={authSubmitting}
                     className="flex-1 py-2.5 rounded-xl bg-amber-500 text-gray-950 font-bold text-xs uppercase hover:bg-amber-400 transition"
                   >
-                    {authSubmitting ? 'Création...' : "S'inscrire & Réserver"}
+                    {authSubmitting ? t.common.loading : t.bookingModal.authSubmitRegister}
                   </button>
                 </div>
               </form>
@@ -477,25 +477,30 @@ export default function BookingModal({
               {/* Service Selection */}
               <div>
                 <label className="block text-xs font-bold text-gray-300 mb-1.5 uppercase tracking-wider">
-                  1. {t.bookingModal.selectService}
+                  {t.bookingModal.stepService}
                 </label>
                 <select
                   value={selectedServiceId}
                   onChange={(e) => setSelectedServiceId(Number(e.target.value))}
                   className="w-full px-3.5 py-2.5 bg-gray-950 border border-gray-700 rounded-xl text-white text-xs outline-none focus:border-amber-500"
                 >
-                  {services.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name || (lang === 'ar' ? s.nameAr : s.nameFr)} — {s.duration} min ({s.price} {s.currency || 'MAD'})
-                    </option>
-                  ))}
+                  {services.map((s) => {
+                    const sName = lang === 'ar' ? (s.nameAr || s.name) : (s.nameFr || s.name);
+                    const sDuration = typeof s.duration === 'number' ? s.duration : parseInt(s.duration, 10) || 30;
+                    const sCurrency = t.common?.currency || s.currency || 'MAD';
+                    return (
+                      <option key={s.id} value={s.id}>
+                        {sName} — {sDuration} {t.common?.minutes || 'min'} ({s.price} {sCurrency})
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
               {/* Barber Selection */}
               <div>
                 <label className="block text-xs font-bold text-gray-300 mb-1.5 uppercase tracking-wider">
-                  2. {t.bookingModal.selectBarber}
+                  {t.bookingModal.stepBarber}
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {barbers.map((b) => {
@@ -505,7 +510,7 @@ export default function BookingModal({
                         key={b.id}
                         type="button"
                         onClick={() => setSelectedBarberId(b.id)}
-                        className={`p-2 rounded-xl border text-left transition-all flex items-center gap-2 cursor-pointer ${
+                        className={`p-2 rounded-xl border text-start transition-all flex items-center gap-2 cursor-pointer ${
                           isSelected
                             ? 'bg-amber-500/10 border-amber-500 text-white'
                             : 'bg-gray-950/60 border-gray-800 text-gray-400 hover:border-gray-700'
@@ -533,11 +538,11 @@ export default function BookingModal({
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider">
-                      3. Date de Visite
+                      {t.bookingModal.stepDate}
                     </label>
                     {date === getTodayDateString() && (
                       <span className="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded font-semibold border border-amber-500/20">
-                        Aujourd'hui
+                        {t.common?.today || "Aujourd'hui"}
                       </span>
                     )}
                   </div>
@@ -558,17 +563,17 @@ export default function BookingModal({
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider">
-                      Créneau Horaire
+                      {t.bookingModal.stepSlot}
                     </label>
                     <span className="text-[10px] text-gray-400 font-mono">
-                      {availableSlots.filter((s) => !isSlotInPast(s, date)).length} libre(s)
+                      {availableSlots.filter((s) => !isSlotInPast(s, date)).length} {t.common?.available || 'libre(s)'}
                     </span>
                   </div>
 
                   {loadingSlots ? (
                     <div className="py-6 px-3 bg-gray-950 border border-gray-800 rounded-xl flex items-center justify-center gap-2 text-xs text-amber-400">
                       <div className="w-4 h-4 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
-                      <span>Recherche des disponibilités en direct...</span>
+                      <span>{t.bookingModal.searchingSlots}</span>
                     </div>
                   ) : allSlotsData.length > 0 ? (
                     <div className="p-2 bg-gray-950 border border-gray-800 rounded-xl">
@@ -600,36 +605,36 @@ export default function BookingModal({
                               }`}
                               title={
                                 isPast
-                                  ? 'Créneau passé'
+                                  ? t.common?.passed
                                   : isBooked
-                                  ? 'Créneau déjà réservé'
+                                  ? t.common?.booked
                                   : isBreak
-                                  ? 'Pause'
-                                  : `Sélectionner ${slot}`
+                                  ? t.common?.pause
+                                  : `${t.bookingModal.stepSlot} ${slot}`
                               }
                             >
                               {slot}
-                              {isBooked && <span className="block text-[8px] text-red-400">Pris</span>}
-                              {isPast && <span className="block text-[8px] text-gray-600">Passé</span>}
+                              {isBooked && <span className="block text-[8px] text-red-400">{t.common?.booked}</span>}
+                              {isPast && <span className="block text-[8px] text-gray-600">{t.common?.passed}</span>}
                             </button>
                           );
                         })}
                       </div>
                       <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-400 pt-1.5 border-t border-gray-800/60 justify-end">
                         <span className="flex items-center gap-1">
-                          <span className="w-2 h-2 rounded bg-amber-500 inline-block"></span> Choisi
+                          <span className="w-2 h-2 rounded bg-amber-500 inline-block"></span> {t.bookingModal.legendChosen}
                         </span>
                         <span className="flex items-center gap-1">
-                          <span className="w-2 h-2 rounded bg-red-800/60 inline-block"></span> Réservé
+                          <span className="w-2 h-2 rounded bg-red-800/60 inline-block"></span> {t.bookingModal.legendBooked}
                         </span>
                         <span className="flex items-center gap-1">
-                          <span className="w-2 h-2 rounded bg-gray-700/60 inline-block"></span> Passé
+                          <span className="w-2 h-2 rounded bg-gray-700/60 inline-block"></span> {t.bookingModal.legendPassed}
                         </span>
                       </div>
                     </div>
                   ) : availableSlots.length === 0 ? (
                     <div className="text-xs text-red-400 py-3 px-3 bg-red-950/30 border border-red-900/30 rounded-xl">
-                      Complet ou jour de repos à cette date.
+                      {t.bookingModal.noSlots}
                     </div>
                   ) : (
                     <select
@@ -641,7 +646,7 @@ export default function BookingModal({
                         const isPassed = isSlotInPast(slot, date);
                         return (
                           <option key={slot} value={slot} disabled={isPassed}>
-                            {slot} {isPassed ? '— (Déjà passé)' : ''}
+                            {slot} {isPassed ? t.bookingModal.passedSlotNotice : ''}
                           </option>
                         );
                       })}
@@ -661,7 +666,7 @@ export default function BookingModal({
                     required
                     value={clientName}
                     onChange={(e) => setClientName(e.target.value)}
-                    placeholder="Nom & Prénom"
+                    placeholder={t.bookingModal.namePlaceholder}
                     className="w-full px-3.5 py-2 bg-gray-950 border border-gray-700 rounded-xl text-white text-xs outline-none focus:border-amber-500"
                   />
                 </div>
@@ -674,7 +679,7 @@ export default function BookingModal({
                     required
                     value={clientPhone}
                     onChange={(e) => setClientPhone(e.target.value)}
-                    placeholder="+212 6 XX XX XX XX"
+                    placeholder={t.bookingModal.phonePlaceholder}
                     className="w-full px-3.5 py-2 bg-gray-950 border border-gray-700 rounded-xl text-white text-xs outline-none focus:border-amber-500"
                   />
                 </div>
@@ -683,13 +688,13 @@ export default function BookingModal({
               {/* Notes */}
               <div>
                 <label className="block text-xs font-bold text-gray-300 mb-1 uppercase tracking-wider">
-                  Notes particulières (facultatif)
+                  {t.bookingModal.notesLabel}
                 </label>
                 <input
                   type="text"
                   value={clientNotes}
                   onChange={(e) => setClientNotes(e.target.value)}
-                  placeholder="Ex: Dégradé blanc, contours soignés..."
+                  placeholder={t.bookingModal.notesPlaceholder}
                   className="w-full px-3.5 py-2 bg-gray-950 border border-gray-700 rounded-xl text-white text-xs outline-none focus:border-amber-500"
                 />
               </div>
@@ -697,13 +702,13 @@ export default function BookingModal({
               {/* Pricing & Loyalty Summary */}
               <div className="p-3.5 rounded-xl bg-gray-950 border border-gray-800 flex items-center justify-between text-xs">
                 <div>
-                  <span className="text-gray-400">Total Prestation :</span>
+                  <span className="text-gray-400">{t.bookingModal.totalService}</span>
                   <span className="ml-2 font-mono font-bold text-amber-400 text-sm">
-                    {activeService?.price} {activeService?.currency || 'MAD'}
+                    {activeService?.price} {t.common?.currency || activeService?.currency || 'MAD'}
                   </span>
                 </div>
                 <div className="text-emerald-400 font-medium text-[11px]">
-                  +{Math.round((activeService?.price || 150) * 0.1)} pts fidélité
+                  +{Math.round((activeService?.price || 150) * 0.1)} {t.bookingModal.loyaltyPoints}
                 </div>
               </div>
 
@@ -718,9 +723,9 @@ export default function BookingModal({
                 }`}
               >
                 {submitting ? (
-                  <span>Confirmation en cours...</span>
+                  <span>{t.bookingModal.confirming}</span>
                 ) : !isAuthenticated ? (
-                  <span>Continuer & Valider (Identification Rapide) →</span>
+                  <span>{t.bookingModal.guestContinue}</span>
                 ) : (
                   <span>{t.bookingModal.confirmBtn}</span>
                 )}

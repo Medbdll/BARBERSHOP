@@ -79,7 +79,9 @@ export default function ServicesSection({
             const isSelected = selectedServiceId === service.id;
             const name = lang === 'ar' ? (service.nameAr || service.name) : (service.nameFr || service.name);
             const desc = lang === 'ar' ? (service.descriptionAr || service.description) : (service.descriptionFr || service.description);
-            const formattedDuration = typeof service.duration === 'number' ? `${service.duration} min` : service.duration;
+            const rawDuration = typeof service.duration === 'number' ? service.duration : parseInt(service.duration, 10) || 30;
+            const formattedDuration = `${rawDuration} ${t.common?.minutes || 'min'}`;
+            const currencyLabel = t.common?.currency || 'MAD';
 
             return (
               <div
@@ -93,7 +95,7 @@ export default function ServicesSection({
                 {/* Popular or Recommended badge */}
                 {(service.popular || service.category === 'vip') && (
                   <div className="absolute -top-3 right-4 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-gray-950 text-[10px] font-black uppercase tracking-wider shadow">
-                    Prestige
+                    {t.common?.prestige || 'Prestige'}
                   </div>
                 )}
 
@@ -123,7 +125,7 @@ export default function ServicesSection({
                         {service.price}
                       </span>{' '}
                       <span className="text-xs font-bold text-amber-500/80">
-                        {service.currency || 'MAD'}
+                        {currencyLabel}
                       </span>
                     </div>
                   </div>
