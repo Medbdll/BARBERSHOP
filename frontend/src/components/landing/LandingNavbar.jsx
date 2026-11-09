@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ScissorsIcon } from '../auth/AuthIcons';
 import { useAuth } from '../../context/useAuth';
+import BrandLogo from '../common/BrandLogo';
 
 export default function LandingNavbar({
   lang = 'fr',
@@ -39,25 +40,9 @@ export default function LandingNavbar({
           {/* Brand Logo */}
           <div
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="flex items-center gap-3 cursor-pointer group"
+            className="flex items-center cursor-pointer group py-1"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 p-0.5 shadow-md shadow-amber-600/20 group-hover:scale-105 transition-transform">
-              <div className="w-full h-full bg-gray-950 rounded-[10px] flex items-center justify-center text-amber-400">
-                <ScissorsIcon className="w-5 h-5" />
-              </div>
-            </div>
-
-            <div className="text-left">
-              <span className="font-extrabold text-base sm:text-lg tracking-wider text-white flex items-center gap-1.5">
-                BERBER SHOP
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                  PRIVÉ
-                </span>
-              </span>
-              <p className="text-[10px] text-amber-500/80 uppercase tracking-widest font-medium">
-                Maison de Barbier • Casablanca
-              </p>
-            </div>
+            <BrandLogo className="h-16 sm:h-18" />
           </div>
 
           {/* Desktop Nav Links */}

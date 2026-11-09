@@ -5,9 +5,9 @@ export default function HeroSection({ t, onOpenBooking, onExploreServices }) {
     <section className="relative min-h-[90vh] flex flex-col justify-center items-center text-center px-4 sm:px-6 lg:px-8 py-20 overflow-hidden bg-[#111827]">
       {/* Background Photography with dark luxury lighting */}
       <div
-        className="absolute inset-0 bg-cover bg-center opacity-25 scale-105 transition-transform duration-1000 ease-out"
+        className="absolute inset-0 bg-cover bg-center opacity-75 scale-105 transition-transform duration-1000 ease-out"
         style={{
-          backgroundImage: `url('https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&q=80&w=1600')`,
+          backgroundImage: `url('heroImg.jpg')`,
         }}
       ></div>
 
@@ -23,7 +23,7 @@ export default function HeroSection({ t, onOpenBooking, onExploreServices }) {
         </div>
 
         {/* Main Title */}
-        <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white leading-tight">
+        <h1 className="pt-10 text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white leading-tight">
           {t.hero.titleStart}{' '}
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-amber-600">
             {t.hero.titleGold}

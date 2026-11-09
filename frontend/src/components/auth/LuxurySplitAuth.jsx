@@ -6,6 +6,7 @@ import LuxuryForgotPasswordForm from './LuxuryForgotPasswordForm';
 import LuxuryUserProfile from './LuxuryUserProfile';
 import { ScissorsIcon, GoldStarIcon } from './AuthIcons';
 import { useAuth } from '../../context/useAuth';
+import BrandLogo from '../common/BrandLogo';
 
 export default function LuxurySplitAuth({
   initialMode = 'login',
@@ -91,25 +92,7 @@ export default function LuxurySplitAuth({
             role={onBackToShop ? 'button' : undefined}
             className="inline-flex items-center gap-3 cursor-pointer group"
           >
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-700 p-0.5 shadow-lg shadow-amber-600/20 group-hover:scale-105 transition-transform">
-              <div className="w-full h-full bg-gray-950 rounded-[14px] flex items-center justify-center text-amber-400">
-                <ScissorsIcon className="w-6 h-6" />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-lg sm:text-xl tracking-wider text-white">
-                  BERBER SHOP
-                </span>
-                <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded">
-                  PRIVÉ
-                </span>
-              </div>
-              <p className="text-xs text-amber-500/80 tracking-widest uppercase font-medium">
-                Maître Barbier & Soins d'Exception
-              </p>
-            </div>
+            <BrandLogo className="h-18 sm:h-22" />
           </div>
         </div>
 

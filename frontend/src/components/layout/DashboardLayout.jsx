@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
+import BrandLogo from '../common/BrandLogo';
 
 export default function DashboardLayout({ title, subtitle, children, navItems = [] }) {
   const { user, logout, isAdmin, isEmploye, isClient } = useAuth();
@@ -44,19 +45,12 @@ export default function DashboardLayout({ title, subtitle, children, navItems = 
             <div className="flex items-center gap-4">
               <Link
                 to={isAdmin ? '/admin' : isEmploye ? '/employe' : '/'}
-                className="flex items-center gap-2 group"
+                className="flex items-center gap-2 group py-1"
               >
-                <span className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#D97706] to-[#B45309] flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-amber-900/30">
-                  AR
+                <BrandLogo className="h-12 sm:h-13" />
+                <span className="hidden sm:inline-block text-[10px] text-amber-500/80 tracking-widest uppercase font-semibold pl-2 border-l border-gray-800">
+                  {isAdmin ? 'Manager Suite' : isEmploye ? 'Barbier Pro' : 'Espace VIP'}
                 </span>
-                <div>
-                  <div className="text-sm font-serif font-bold tracking-widest text-amber-400 group-hover:text-amber-300 transition-colors uppercase">
-                    Atelier Royal
-                  </div>
-                  <div className="text-[10px] text-gray-400 tracking-wider uppercase">
-                    {isAdmin ? 'Manager Suite VIP' : isEmploye ? 'Espace Barbier Pro' : 'Maison de Barbier'}
-                  </div>
-                </div>
               </Link>
 
               {/* Show "Site public" link ONLY for clients */}
