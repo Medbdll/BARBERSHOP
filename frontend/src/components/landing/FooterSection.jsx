@@ -1,5 +1,6 @@
 import React from 'react';
 import { ScissorsIcon, PhoneIcon, MailIcon } from '../auth/AuthIcons';
+import BrandLogo from '../common/BrandLogo';
 
 export default function FooterSection({ t }) {
   return (
@@ -9,15 +10,11 @@ export default function FooterSection({ t }) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Column 1: Brand & Bio */}
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 p-0.5 shadow-md">
-                <div className="w-full h-full bg-gray-950 rounded-[10px] flex items-center justify-center text-amber-400">
-                  <ScissorsIcon className="w-4 h-4" />
-                </div>
-              </div>
-              <span className="font-extrabold text-base tracking-wider text-white">
-                BERBER SHOP <span className="text-amber-500 text-xs">PRIVÉ</span>
-              </span>
+            <div
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              className="flex items-center cursor-pointer group"
+            >
+              <BrandLogo className="h-14 sm:h-16" />
             </div>
 
             <p className="text-xs text-gray-400 leading-relaxed">

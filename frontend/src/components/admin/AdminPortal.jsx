@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
+import BrandLogo from '../common/BrandLogo';
 import { getTodayDateString, isSlotInPast, getRelativeScheduleStatus } from '../../utils/dateTime';
 import {
   getAdminStats,
@@ -706,9 +707,9 @@ export default function AdminPortal() {
               className="flex items-center gap-3 overflow-hidden text-left cursor-pointer focus:outline-none group"
               title="Vue d'ensemble du Dashboard"
             >
-              <span className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#D97706] to-[#B45309] flex-shrink-0 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-amber-900/30 group-hover:scale-105 transition-transform">
-                AR
-              </span>
+              <div className="w-12 h-12 rounded-xl overflow-hidden bg-black/60 flex-shrink-0 flex items-center justify-center border border-amber-500/30 group-hover:scale-105 transition-transform shadow-lg shadow-amber-900/20">
+                <BrandLogo className="w-full h-full [&_svg]:scale-125" />
+              </div>
               {!sidebarCollapsed && (
                 <div className="truncate">
                   <div className="text-sm font-serif font-black tracking-widest text-amber-400 uppercase">

@@ -1,4 +1,11 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,700&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --font-sans: 'Cinzel', 'Playfair Display', Georgia, serif;
+  --font-serif: 'Cinzel', 'Playfair Display', Georgia, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
 
 @layer base {
   html {
@@ -8,15 +15,67 @@
   html, body {
     margin: 0;
     padding: 0;
-    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
     background-color: #111827;
     color: #f3f4f6;
     min-height: 100vh;
   }
+
+  h1, h2, h3, h4, h5, h6,
+  .font-serif,
+  nav, button,
+  [role="button"] {
+    font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
+    letter-spacing: 0.04em;
+  }
+
+  p, span, a, input, select, textarea, label {
+    font-family: 'Playfair Display', 'Cinzel', Georgia, serif;
+  }
+}
+
+*, *::before, *::after {
+  font-family: inherit;
+}
+
+.font-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
 }
 
 /* Arabic typography support */
-[dir="rtl"] {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+[dir="rtl"], [dir="rtl"] * {
+  font-family: 'Cinzel', 'Playfair Display', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   letter-spacing: 0;
+}
+
+/* ==========================================================================
+   Modern Luxury Logo Hover Effects
+   ========================================================================== */
+@keyframes logoSheenSweep {
+  0% {
+    transform: translateX(-160%) skewX(-25deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.9;
+  }
+  60% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateX(320%) skewX(-25deg);
+    opacity: 0;
+  }
+}
+
+.logo-sheen-beam {
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+/* Trigger sheen on hover of either the logo container or any parent .group */
+.group:hover .logo-sheen-beam,
+.group\/logo:hover .logo-sheen-beam {
+  animation: logoSheenSweep 1.15s cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
 }
