@@ -44,6 +44,7 @@ class Kernel extends HttpKernel
             \Illuminate\Routing\Middleware\ThrottleRequests::class.':api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\SetLocaleMiddleware::class,
+            \App\Http\Middleware\CheckIdleTimeout::class,
         ],
     ];
 
@@ -70,5 +71,6 @@ class Kernel extends HttpKernel
         'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
         'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         'set.locale' => \App\Http\Middleware\SetLocaleMiddleware::class,
+        'idle.timeout' => \App\Http\Middleware\CheckIdleTimeout::class,
     ];
 }

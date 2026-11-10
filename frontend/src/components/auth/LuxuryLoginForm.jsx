@@ -11,7 +11,7 @@ export default function LuxuryLoginForm({
   onSwitchToForgotPassword,
   onSuccess,
 }) {
-  const { login } = useAuth();
+  const { login, sessionExpired, clearSessionExpired } = useAuth();
   const { t, isRtl } = useLanguage();
   const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
@@ -29,6 +29,7 @@ export default function LuxuryLoginForm({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (sessionExpired) clearSessionExpired();
     setProcessing(true);
     setError(null);
 
@@ -63,6 +64,26 @@ export default function LuxuryLoginForm({
         </p>
       </div>
 
+      {/* Session Expired Notice (30 min inactivity) */}
+      {sessionExpired && (
+        <div className="p-3.5 rounded-xl bg-amber-950/40 border border-amber-500/50 text-amber-200 text-xs flex items-start gap-2.5 shadow-lg shadow-amber-950/30 animate-fadeIn">
+          <svg className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div className="flex-1 font-medium leading-relaxed">
+            {t.auth.login.sessionExpired}
+          </div>
+          <button
+            type="button"
+            onClick={clearSessionExpired}
+            className="text-amber-400/80 hover:text-amber-200 p-0.5 rounded transition-colors text-xs font-bold leading-none cursor-pointer"
+            title={t.common.close}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Error alert */}
       {error && (
         <div className="p-3.5 rounded-xl bg-red-950/40 border border-red-500/40 text-red-200 text-xs flex items-start gap-2.5">
@@ -95,7 +116,10 @@ export default function LuxuryLoginForm({
           autoComplete="email"
           placeholder={t.auth.login.emailPlaceholder}
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            if (sessionExpired) clearSessionExpired();
+          }}
         />
 
         <LuxuryInput
@@ -107,7 +131,10 @@ export default function LuxuryLoginForm({
           autoComplete="current-password"
           placeholder={t.auth.login.passwordPlaceholder}
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            if (sessionExpired) clearSessionExpired();
+          }}
         />
 
         {/* Remember me & Forgot Password */}

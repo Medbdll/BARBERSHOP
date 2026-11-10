@@ -185,6 +185,7 @@ export const translations = {
         googleBtn: "Continuer avec Google",
         noAccount: "Pas encore membre ?",
         registerLink: "Rejoindre le Club VIP",
+        sessionExpired: "Votre session a expiré après 30 minutes d'inactivité. Veuillez vous reconnecter.",
       },
       register: {
         title: "Rejoindre le Club VIP",
@@ -403,6 +404,7 @@ export const translations = {
         googleBtn: "المتابعة باستخدام Google",
         noAccount: "لست عضواً بعد ؟",
         registerLink: "الانضمام إلى نادي VIP",
+        sessionExpired: "انتهت جلستك بعد 30 دقيقة من عدم النشاط لدواعي الأمان. يرجى تسجيل الدخول مجدداً.",
       },
       register: {
         title: "الانضمام إلى نادي VIP",
