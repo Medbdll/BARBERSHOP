@@ -58,6 +58,17 @@ export default function LuxurySplitAuth({
       return;
     }
 
+    // Check if there is a draft booking waiting in sessionStorage
+    try {
+      const pending = sessionStorage.getItem('pending_booking');
+      if (pending) {
+        navigate('/?booking=restore', { replace: true });
+        return;
+      }
+    } catch {
+      // Ignore sessionStorage read errors
+    }
+
     const fromPath = location.state?.from?.pathname;
     if (fromPath && !['/auth', '/login', '/register', '/'].includes(fromPath)) {
       navigate(fromPath, { replace: true });

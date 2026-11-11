@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AdminApiController;
+use App\Http\Controllers\Api\AppointmentController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ClientAppointmentController;
 use App\Http\Controllers\Api\EmployeScheduleController;
@@ -53,9 +54,9 @@ Route::middleware(['auth:sanctum', 'role:client'])->prefix('client')->group(func
     Route::get('/loyalty', [ClientAppointmentController::class, 'loyalty']);
 });
 
-// Direct booking route for authenticated clients
-Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
-    Route::post('/appointments', [ClientAppointmentController::class, 'store']);
+// Direct booking route for authenticated users
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/appointments', [AppointmentController::class, 'store']);
 });
 
 // ========================================================

@@ -77,11 +77,29 @@ export default function BarbersSection({
                       {title}
                     </p>
 
-                    {/* Specialty Pill */}
-                    <div className="mt-3">
+                    {/* Specialty Pill & Live Queue Badge */}
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
                       <span className="text-[11px] px-2.5 py-1 rounded-lg bg-gray-800 text-gray-300 border border-gray-700/60 inline-block">
                         ✂️ {specialty}
                       </span>
+
+                      {barber.waiting_clients_count !== undefined && (
+                        Number(barber.waiting_clients_count) === 0 ? (
+                          <span className="text-[11px] px-2.5 py-1 rounded-lg bg-emerald-950/50 border border-emerald-500/30 text-emerald-300 inline-flex items-center gap-1 font-semibold">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <span>{t.bookingModal?.queueImmediate || '0 client en attente'}</span>
+                          </span>
+                        ) : (
+                          <span className="text-[11px] px-2.5 py-1 rounded-lg bg-amber-950/50 border border-amber-500/30 text-amber-300 inline-flex items-center gap-1 font-semibold">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                            <span>
+                              {lang === 'ar'
+                                ? `${barber.waiting_clients_count} في الانتظار (~${barber.waiting_badge || barber.estimated_wait_minutes + 'د'})`
+                                : `${barber.waiting_clients_count} en attente (~${barber.waiting_badge || barber.estimated_wait_minutes + 'min'})`}
+                            </span>
+                          </span>
+                        )
+                      )}
                     </div>
 
                     {/* Bio excerpt */}

@@ -1,5 +1,41 @@
 import api from './axios';
 
+// In-flight request deduplication map to prevent multiple identical requests hitting PHP dev server simultaneously
+const inFlightRequests = new Map();
+
+// Short in-memory cache for public catalogs (services, barbers, reviews, gallery)
+const memoryCache = new Map();
+const MEMORY_CACHE_TTL = 30000; // 30 seconds
+
+const cachedGet = async (key, fetcher, ttl = MEMORY_CACHE_TTL) => {
+  const cached = memoryCache.get(key);
+  if (cached && Date.now() - cached.timestamp < ttl) {
+    return cached.data;
+  }
+
+  if (inFlightRequests.has(key)) {
+    return inFlightRequests.get(key);
+  }
+
+  const promise = fetcher()
+    .then((data) => {
+      memoryCache.set(key, { data, timestamp: Date.now() });
+      inFlightRequests.delete(key);
+      return data;
+    })
+    .catch((err) => {
+      inFlightRequests.delete(key);
+      if (cached) {
+        console.warn(`[API Cache Fallback] Fetch failed for ${key}, using cached data:`, err.message);
+        return cached.data;
+      }
+      throw err;
+    });
+
+  inFlightRequests.set(key, promise);
+  return promise;
+};
+
 /**
  * =====================================================================
  * PUBLIC API ENDPOINTS
@@ -11,15 +47,26 @@ export const checkBackendStatus = async () => {
   return response.data;
 };
 
-export const getServices = async (category = 'all') => {
-  const params = category && category !== 'all' ? { category } : {};
-  const response = await api.get('/services', { params });
-  return response.data;
+export const getServices = async (category = 'all', forceFresh = false) => {
+  const cacheKey = `services_${category || 'all'}`;
+  if (forceFresh) memoryCache.delete(cacheKey);
+
+  return cachedGet(cacheKey, async () => {
+    const params = category && category !== 'all' ? { category } : {};
+    const response = await api.get('/services', { params });
+    return response.data;
+  });
 };
 
-export const getBarbers = async () => {
-  const response = await api.get('/barbers');
-  return response.data;
+export const getBarbers = async (date = null, forceFresh = false) => {
+  const cacheKey = `barbers_${date || 'today'}`;
+  if (forceFresh) memoryCache.delete(cacheKey);
+
+  return cachedGet(cacheKey, async () => {
+    const params = date ? { date } : {};
+    const response = await api.get('/barbers', { params });
+    return response.data;
+  });
 };
 
 export const getAvailableSlots = async (barberId, date, duration = 30) => {
@@ -33,14 +80,24 @@ export const getAvailableSlots = async (barberId, date, duration = 30) => {
   return response.data;
 };
 
-export const getReviews = async () => {
-  const response = await api.get('/reviews');
-  return response.data;
+export const getReviews = async (forceFresh = false) => {
+  const cacheKey = 'reviews_list';
+  if (forceFresh) memoryCache.delete(cacheKey);
+
+  return cachedGet(cacheKey, async () => {
+    const response = await api.get('/reviews');
+    return response.data;
+  });
 };
 
-export const getGallery = async () => {
-  const response = await api.get('/gallery');
-  return response.data;
+export const getGallery = async (forceFresh = false) => {
+  const cacheKey = 'gallery_list';
+  if (forceFresh) memoryCache.delete(cacheKey);
+
+  return cachedGet(cacheKey, async () => {
+    const response = await api.get('/gallery');
+    return response.data;
+  });
 };
 
 /**

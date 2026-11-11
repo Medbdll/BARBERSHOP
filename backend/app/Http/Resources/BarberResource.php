@@ -24,6 +24,9 @@ class BarberResource extends JsonResource
             'bio' => $this->bio,
             'image_url' => $this->image_url,
             'is_active' => (bool) $this->is_active,
+            'waiting_clients_count' => (int) ($this->waiting_clients_count ?? 0),
+            'estimated_wait_minutes' => (int) ($this->estimated_wait_minutes ?? 0),
+            'waiting_badge' => $this->waiting_badge ?? null,
             'working_hours' => $this->whenLoaded('workingHours'),
             'created_at' => $this->created_at?->toIso8601String(),
         ];

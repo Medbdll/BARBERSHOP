@@ -18,86 +18,11 @@ class ClientAppointmentController extends Controller
 {
     /**
      * POST /api/appointments
-     * 4-step booking validation with atomic double-booking prevention.
+     * 4-step booking validation with atomic double-booking prevention & permanent phone update.
      */
     public function store(Request $request): JsonResponse
     {
-        $user = $request->user();
-
-        // Merge combined appointment timestamp for strict future validation
-        $request->merge([
-            'appointment_datetime' => ($request->filled('appointment_date') && $request->filled('start_time'))
-                ? $request->appointment_date . ' ' . $request->start_time
-                : null,
-        ]);
-
-        // 4-Step Validation with rejection of past date and time
-        $request->validate([
-            'service_id' => ['required', 'exists:services,id'],
-            'barber_id' => ['required', 'exists:barbers,id'],
-            'appointment_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
-            'start_time' => ['required', 'date_format:H:i'],
-            'appointment_datetime' => ['required', 'date', 'after_or_equal:now'],
-            'notes' => ['nullable', 'string', 'max:500'],
-        ], [
-            'appointment_date.after_or_equal' => 'La date du rendez-vous ne peut pas être dans le passé.',
-            'appointment_datetime.after_or_equal' => 'Le rendez-vous ne peut pas être planifié dans le passé. Veuillez sélectionner un horaire à partir du moment présent.',
-        ]);
-
-        $service = Service::where('id', $request->service_id)
-            ->where('is_active', true)
-            ->firstOrFail();
-
-        $barber = Barber::where('id', $request->barber_id)
-            ->where('is_active', true)
-            ->firstOrFail();
-
-        $startTime = Carbon::parse($request->appointment_date . ' ' . $request->start_time);
-        $endTime = $startTime->copy()->addMinutes($service->duration);
-
-        // Prevent Double-Booking: check for any existing non-cancelled appointment overlapping with this window
-        $hasConflict = Appointment::where('barber_id', $barber->id)
-            ->whereDate('appointment_date', $request->appointment_date)
-            ->whereNotIn('status', ['cancelled', 'no_show'])
-            ->where(function ($query) use ($startTime, $endTime) {
-                $query->where('start_time', '<', $endTime->format('H:i:s'))
-                    ->where('end_time', '>', $startTime->format('H:i:s'));
-            })
-            ->exists();
-
-        if ($hasConflict) {
-            throw ValidationException::withMessages([
-                'start_time' => [
-                    "Le créneau de {$request->start_time} est déjà réservé pour {$barber->name}. Veuillez sélectionner un autre horaire disponible."
-                ],
-            ]);
-        }
-
-        // Create the appointment
-        $appointment = Appointment::create([
-            'client_id' => $user->id,
-            'barber_id' => $barber->id,
-            'service_id' => $service->id,
-            'appointment_date' => $request->appointment_date,
-            'start_time' => $startTime->format('H:i:s'),
-            'end_time' => $endTime->format('H:i:s'),
-            'status' => 'confirmed',
-            'total_price' => $service->price,
-            'notes' => $request->notes,
-        ]);
-
-        // Award 15 Loyalty Points for booking
-        $user->increment('loyalty_points', 15);
-
-        $appointment->load(['client', 'barber', 'service']);
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Votre rendez-vous a été confirmé avec succès ! Un SMS de rappel vous parviendra avant votre séance.',
-            'data' => new AppointmentResource($appointment),
-            'loyalty_points_earned' => 15,
-            'current_loyalty_points' => $user->fresh()->loyalty_points,
-        ], 201);
+        return (new AppointmentController())->store($request);
     }
 
     /**
