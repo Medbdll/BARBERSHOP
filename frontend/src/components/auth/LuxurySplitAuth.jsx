@@ -16,22 +16,28 @@ export default function LuxurySplitAuth({
 }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, isAuthenticated, isAdmin, isEmploye, loading: authLoading, defaultDashboard } = useAuth();
+  const { user, isAuthenticated, isAdmin, isEmploye, isClient, loading: authLoading, defaultDashboard } = useAuth();
   const { t, isRtl } = useLanguage();
   
   const startingMode = location.state?.initialMode || initialMode;
   const [mode, setMode] = useState(startingMode); // 'login' | 'register' | 'forgot-password'
 
-  // If already authenticated as admin or employe, redirect directly to their dashboard
+  // If already authenticated, redirect directly to role dashboard
   React.useEffect(() => {
     if (isAuthenticated) {
       if (isAdmin) {
         navigate('/admin', { replace: true });
       } else if (isEmploye) {
         navigate('/employe', { replace: true });
+      } else if (isClient) {
+        let hasPending = false;
+        try {
+          hasPending = !!sessionStorage.getItem('pending_booking');
+        } catch {}
+        navigate(hasPending ? '/client/dashboard?booking=restore' : '/client/dashboard', { replace: true });
       }
     }
-  }, [isAuthenticated, isAdmin, isEmploye, navigate]);
+  }, [isAuthenticated, isAdmin, isEmploye, isClient, navigate]);
 
   // If user is already authenticated, strictly pin active mode to 'profile'
   const activeMode = isAuthenticated ? 'profile' : mode;
@@ -62,7 +68,7 @@ export default function LuxurySplitAuth({
     try {
       const pending = sessionStorage.getItem('pending_booking');
       if (pending) {
-        navigate('/?booking=restore', { replace: true });
+        navigate('/client/dashboard?booking=restore', { replace: true });
         return;
       }
     } catch {
@@ -73,7 +79,7 @@ export default function LuxurySplitAuth({
     if (fromPath && !['/auth', '/login', '/register', '/'].includes(fromPath)) {
       navigate(fromPath, { replace: true });
     } else {
-      navigate(defaultDashboard || '/client', { replace: true });
+      navigate(defaultDashboard || '/client/dashboard', { replace: true });
     }
   };
 

@@ -74,20 +74,20 @@ export default function GoogleCallback() {
         }
 
         if (hasPendingBooking) {
-          navigate('/?booking=restore', { replace: true });
+          navigate('/client/dashboard?booking=restore', { replace: true });
           return;
         }
 
         // 4. Role-based redirection:
         // admin -> /admin
         // employe -> /employe
-        // client -> /client
+        // client -> /client/dashboard
         if (roles.includes('admin')) {
           navigate('/admin', { replace: true });
         } else if (roles.includes('employe')) {
           navigate('/employe', { replace: true });
         } else {
-          navigate('/client', { replace: true });
+          navigate('/client/dashboard', { replace: true });
         }
       } catch (err) {
         console.error('Failed to authenticate Google user:', err);

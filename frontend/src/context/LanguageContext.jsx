@@ -38,9 +38,24 @@ export function LanguageProvider({ children }) {
   // Lazy state initializer: reads localStorage ONCE before initial paint
   const [lang, setLangState] = useState(getStoredLanguage);
 
-  // Switch language and persist to localStorage
-  const setLang = useCallback((newLang) => {
-    const validLang = SUPPORTED_LANGS.includes(newLang) ? newLang : DEFAULT_LANG;
+  // Switch language and persist to localStorage (supports string value or updater callback)
+  const setLang = useCallback((newLangOrUpdater) => {
+    if (typeof newLangOrUpdater === 'function') {
+      setLangState((prev) => {
+        const computed = newLangOrUpdater(prev);
+        const validLang = SUPPORTED_LANGS.includes(computed) ? computed : DEFAULT_LANG;
+        try {
+          localStorage.setItem(STORAGE_KEY, validLang);
+        } catch (err) {
+          console.warn('[LanguageContext] Failed to persist lang to localStorage:', err);
+        }
+        applyDomLanguage(validLang);
+        return validLang;
+      });
+      return;
+    }
+
+    const validLang = SUPPORTED_LANGS.includes(newLangOrUpdater) ? newLangOrUpdater : DEFAULT_LANG;
     setLangState(validLang);
     try {
       localStorage.setItem(STORAGE_KEY, validLang);
@@ -52,8 +67,8 @@ export function LanguageProvider({ children }) {
 
   // Toggle between 'fr' and 'ar'
   const toggleLang = useCallback(() => {
-    setLang((prev) => (prev === 'fr' ? 'ar' : 'fr'));
-  }, [setLang]);
+    setLang(lang === 'fr' ? 'ar' : 'fr');
+  }, [lang, setLang]);
 
   // Keep DOM updated on mount & lang change
   useEffect(() => {

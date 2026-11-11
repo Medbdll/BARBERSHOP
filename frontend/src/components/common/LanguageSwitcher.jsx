@@ -21,10 +21,12 @@ export default function LanguageSwitcher({
         onClick={toggleLang}
         aria-label={isFr ? 'Basculer en Arabe' : 'Passer en Français'}
         title={isFr ? 'Passer en Arabe (العربية)' : 'Passer en Français (FR)'}
-        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-lg border border-gray-800 bg-gray-950/80 text-amber-400 hover:text-amber-300 hover:border-amber-500/40 hover:bg-gray-900 transition-all duration-200 cursor-pointer shadow-sm ${className}`}
+        className={`inline-flex items-center justify-center gap-1.5 min-h-[36px] px-3 py-1.5 text-xs font-bold rounded-lg border border-gray-800 bg-gray-950/80 text-amber-400 hover:text-amber-300 hover:border-amber-500/40 hover:bg-gray-900 transition-all duration-200 cursor-pointer shadow-sm ${className}`}
       >
-        <span className="text-[11px] opacity-75">🌐</span>
-        <span className="tracking-wider">{isFr ? 'العربية' : 'FR'}</span>
+        <span className="text-[11px] opacity-75" aria-hidden="true">🌐</span>
+        <span className={isFr ? 'font-arabic tracking-normal' : 'tracking-wider'}>
+          {isFr ? 'العربية' : 'FR'}
+        </span>
       </button>
     );
   }

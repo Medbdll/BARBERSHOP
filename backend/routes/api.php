@@ -39,6 +39,8 @@ Route::prefix('auth/google')->group(function () {
 // ========================================================
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
+    Route::put('/me', [AuthController::class, 'updateProfile']);
+    Route::patch('/me', [AuthController::class, 'updateProfile']);
     Route::get('/user', [AuthController::class, 'me']); // Backward compatibility
     Route::post('/logout', [AuthController::class, 'logout']);
 });
@@ -54,9 +56,10 @@ Route::middleware(['auth:sanctum', 'role:client'])->prefix('client')->group(func
     Route::get('/loyalty', [ClientAppointmentController::class, 'loyalty']);
 });
 
-// Direct booking route for authenticated users
+// Direct booking route & queue status for authenticated users
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/appointments', [AppointmentController::class, 'store']);
+    Route::get('/client/appointments/{id}/queue-status', [ClientAppointmentController::class, 'queueStatus']);
 });
 
 // ========================================================

@@ -96,6 +96,41 @@ class ClientAppointmentController extends Controller
     }
 
     /**
+     * GET /api/client/appointments/{id}/queue-status
+     * Fetch live queue position (people_ahead & estimated_wait_minutes) for an appointment.
+     */
+    public function queueStatus(Request $request, int $id): JsonResponse
+    {
+        $user = $request->user();
+
+        $appointment = Appointment::where('id', $id)
+            ->where('client_id', $user->id)
+            ->with([
+                'barber:id,name,specialty,image_url',
+                'service:id,name,duration,price',
+            ])
+            ->firstOrFail();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'id' => $appointment->id,
+                'status' => $appointment->status,
+                'appointment_date' => $appointment->appointment_date?->format('Y-m-d'),
+                'start_time' => substr((string) $appointment->start_time, 0, 5),
+                'people_ahead' => (int) $appointment->people_ahead,
+                'minutes_until_start' => (int) $appointment->minutes_until_start,
+                'is_my_turn_now' => (bool) $appointment->is_my_turn_now,
+                'estimated_wait_minutes' => (int) $appointment->estimated_wait_minutes,
+                'barber' => $appointment->barber ? [
+                    'id' => $appointment->barber->id,
+                    'name' => $appointment->barber->name,
+                ] : null,
+            ],
+        ]);
+    }
+
+    /**
      * PATCH /api/client/appointments/{id}/cancel
      * Cancel own upcoming appointment with strict past and in_progress checks.
      */

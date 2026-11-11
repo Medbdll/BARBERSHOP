@@ -288,7 +288,7 @@ class AdminApiController extends Controller
     public function appointmentsUpdateStatus(Request $request, int $id): JsonResponse
     {
         $request->validate([
-            'status' => ['required', 'in:pending,confirmed,completed,cancelled,no_show'],
+            'status' => ['required', 'in:pending,confirmed,in_progress,completed,cancelled,no_show'],
         ]);
 
         $appointment = Appointment::with(['client', 'barber', 'service'])->findOrFail($id);
@@ -297,10 +297,9 @@ class AdminApiController extends Controller
             'status' => $request->status,
         ]);
 
-        // If completed and not previously completed, reward loyalty points
+        // If completed and not previously completed, increment loyalty points (+1)
         if ($request->status === 'completed' && $oldStatus !== 'completed' && $appointment->client) {
-            $points = (int) round($appointment->total_price * 0.1);
-            $appointment->client->increment('loyalty_points', $points);
+            $appointment->client->increment('loyalty_points', 1);
         }
 
         return response()->json([

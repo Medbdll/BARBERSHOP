@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -91,6 +92,42 @@ class AuthController extends Controller
             'user' => new UserResource($user),
             'roles' => $user->getRoleNames(),
             'permissions' => $user->getAllPermissions()->pluck('name'),
+        ]);
+    }
+
+    /**
+     * Update authenticated user's profile (name, email, phone).
+     */
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => [
+                'required',
+                'string',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email')->ignore($user->id),
+            ],
+            'phone' => ['nullable', 'string', 'max:25'],
+        ]);
+
+        $user->update([
+            'name' => trim($validated['name']),
+            'email' => trim($validated['email']),
+            'phone' => isset($validated['phone']) ? trim((string) $validated['phone']) : null,
+        ]);
+
+        $freshUser = $user->fresh();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Profil mis à jour avec succès.',
+            'user' => new UserResource($freshUser),
+            'roles' => $freshUser->getRoleNames(),
+            'permissions' => $freshUser->getAllPermissions()->pluck('name'),
         ]);
     }
 

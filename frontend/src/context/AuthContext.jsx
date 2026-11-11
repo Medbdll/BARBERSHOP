@@ -373,7 +373,7 @@ export function AuthProvider({ children }) {
   const defaultDashboard = useMemo(() => {
     if (isAdmin) return '/admin';
     if (isEmploye) return '/employe';
-    if (isClient) return '/client';
+    if (isClient) return '/client/dashboard';
     return '/';
   }, [isAdmin, isEmploye, isClient]);
 
