@@ -99,13 +99,19 @@ export default function DashboardLayout({ title, subtitle, children, navItems = 
 
               {/* User details */}
               <div className="flex items-center gap-2 pl-2">
-                <img
-                  src={user?.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'User')}&color=D97706&background=1F2937`}
-                  alt={user?.name || 'Profil'}
-                  loading="lazy"
-                  decoding="async"
-                  className="w-8 h-8 rounded-full border border-amber-500/40 object-cover"
-                />
+                {user?.avatar || (user?.profile_photo_url && !user.profile_photo_url.includes('ui-avatars.com')) ? (
+                  <img
+                    src={user?.avatar || user?.profile_photo_url}
+                    alt={user?.name || 'Profil'}
+                    loading="lazy"
+                    decoding="async"
+                    className="w-8 h-8 rounded-full border border-[#D9822B] object-cover shrink-0"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-[#10151F] border border-[#D9822B] text-[#D9822B] font-bold text-xs flex items-center justify-center shrink-0">
+                    {(user?.name || 'B').trim().charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <div className="text-left hidden lg:block">
                   <div className="text-xs font-medium text-gray-200">{user?.name}</div>
                   <div className="text-[10px] text-gray-400 truncate max-w-[130px]">{user?.email}</div>

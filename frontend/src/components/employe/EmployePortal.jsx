@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import DashboardLayout from '../layout/DashboardLayout';
+import AvatarUploader from '../common/AvatarUploader';
 import { useAuth } from '../../context/useAuth';
 import { getTodayDateString, getRelativeScheduleStatus } from '../../utils/dateTime';
 import {
@@ -257,17 +258,18 @@ export default function EmployePortal() {
     >
       {/* Top Header Bar with Live Digital Clock & Auto Polling Badge */}
       <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-2xl bg-[#161F30] border border-gray-800 shadow-xl">
-        <div className="flex items-center gap-3">
-          <img
-            src={
-              barberProfile?.image_url ||
-              user?.profile_photo_url ||
-              `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'Barbier')}&background=111827&color=D97706`
-            }
-            alt={user?.name}
-            loading="lazy"
-            decoding="async"
-            className="w-12 h-12 rounded-xl object-cover border-2 border-amber-500/40 shadow-md flex-shrink-0"
+        <div className="flex items-center gap-3.5">
+          <AvatarUploader
+            size="md"
+            currentImage={user?.avatar || barberProfile?.image_url}
+            onUploadSuccess={(res) => {
+              const newUrl = res?.avatar_url;
+              if (newUrl) {
+                setBarberProfile((prev) => (prev ? { ...prev, image_url: newUrl } : prev));
+              }
+              showFeedback('Photo de profil mise à jour et synchronisée !');
+            }}
+            onError={(msg) => showFeedback(msg, 'error')}
           />
           <div>
             <div className="flex items-center gap-2">
