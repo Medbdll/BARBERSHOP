@@ -9,7 +9,7 @@ import './App.css';
 // Code Splitting & Lazy Loading for minimal initial bundle size
 const LandingPage = React.lazy(() => import('./components/landing/LandingPage'));
 const LuxurySplitAuth = React.lazy(() => import('./components/auth/LuxurySplitAuth'));
-const ClientPortal = React.lazy(() => import('./components/client/ClientPortal'));
+const ClientDashboard = React.lazy(() => import('./components/client/ClientDashboard'));
 const EmployePortal = React.lazy(() => import('./components/employe/EmployePortal'));
 const AdminPortal = React.lazy(() => import('./components/admin/AdminPortal'));
 const GoogleCallback = React.lazy(() => import('./components/auth/GoogleCallback'));
@@ -32,9 +32,19 @@ function LuxuryPageFallback() {
   );
 }
 
+function hasPendingBookingDraft() {
+  if (typeof window === 'undefined') return false;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('booking') === 'restore' || !!sessionStorage.getItem('pending_booking');
+  } catch {
+    return false;
+  }
+}
+
 function LandingPageWrapper() {
   const navigate = useNavigate();
-  const { isAuthenticated, isAdmin, isEmploye, defaultDashboard } = useAuth();
+  const { isAuthenticated, isAdmin, isEmploye, isClient, defaultDashboard } = useAuth();
 
   // Admin users are strictly directed to their dedicated dashboard
   if (isAuthenticated && isAdmin) {
@@ -46,9 +56,17 @@ function LandingPageWrapper() {
     return <Navigate to="/employe" replace />;
   }
 
+  // Client users are automatically redirected to /client/dashboard
+  if (isAuthenticated && isClient) {
+    const target = hasPendingBookingDraft()
+      ? '/client/dashboard?booking=restore'
+      : '/client/dashboard';
+    return <Navigate to={target} replace />;
+  }
+
   const handleOpenAuth = (mode = 'login') => {
     if (isAuthenticated) {
-      navigate(defaultDashboard || '/client');
+      navigate(defaultDashboard || '/client/dashboard');
     } else {
       navigate('/auth', { state: { initialMode: mode } });
     }
@@ -59,14 +77,20 @@ function LandingPageWrapper() {
 
 function AuthPageWrapper({ initialMode = 'login' }) {
   const navigate = useNavigate();
-  const { isAuthenticated, isAdmin, isEmploye } = useAuth();
+  const { isAuthenticated, isAdmin, isEmploye, isClient } = useAuth();
 
-  // If already authenticated as admin or employe, go directly to their dedicated dashboard
+  // If already authenticated, redirect directly to role dashboard
   if (isAuthenticated && isAdmin) {
     return <Navigate to="/admin" replace />;
   }
   if (isAuthenticated && isEmploye) {
     return <Navigate to="/employe" replace />;
+  }
+  if (isAuthenticated && isClient) {
+    const target = hasPendingBookingDraft()
+      ? '/client/dashboard?booking=restore'
+      : '/client/dashboard';
+    return <Navigate to={target} replace />;
   }
 
   return (
@@ -108,12 +132,12 @@ export default function App() {
 
               {/* Role-Based Protected Routes */}
 
-              {/* 1. Client Privilège Portal (role: client) */}
+              {/* 1. Client Privilège Dashboard (role: client) */}
               <Route
                 path="/client/*"
                 element={
                   <ProtectedRoute allowedRoles={['client']}>
-                    <ClientPortal />
+                    <ClientDashboard />
                   </ProtectedRoute>
                 }
               />

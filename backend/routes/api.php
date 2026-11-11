@@ -39,6 +39,8 @@ Route::prefix('auth/google')->group(function () {
 // ========================================================
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
+    Route::put('/me', [AuthController::class, 'updateProfile']);
+    Route::patch('/me', [AuthController::class, 'updateProfile']);
     Route::get('/user', [AuthController::class, 'me']); // Backward compatibility
     Route::post('/logout', [AuthController::class, 'logout']);
 });

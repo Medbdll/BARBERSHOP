@@ -137,6 +137,11 @@ export const getUserProfile = async () => {
   return response.data;
 };
 
+export const updateUserProfile = async ({ name, email, phone }) => {
+  const response = await api.put('/me', { name, email, phone });
+  return response.data;
+};
+
 export const forgotPassword = async ({ email }) => {
   const response = await api.post('/forgot-password', { email });
   return response.data;
@@ -177,12 +182,16 @@ export const rescheduleClientAppointment = async (id, { appointment_date, start_
   return response.data;
 };
 
-export const submitClientReview = async ({ barber_id, rating, comment }) => {
-  const response = await api.post('/client/reviews', {
+export const submitClientReview = async ({ appointment_id = null, barber_id, rating, comment }) => {
+  const payload = {
     barber_id,
     rating,
     comment,
-  });
+  };
+  if (appointment_id) {
+    payload.appointment_id = appointment_id;
+  }
+  const response = await api.post('/client/reviews', payload);
   return response.data;
 };
 

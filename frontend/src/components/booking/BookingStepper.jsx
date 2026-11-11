@@ -1758,7 +1758,7 @@ export default function BookingStepper({
               type="button"
               onClick={() => {
                 if (onClose) onClose();
-                navigate('/client');
+                navigate('/client/dashboard');
               }}
               className="w-full sm:w-auto min-h-[44px] px-6 py-3 rounded-xl font-bold text-xs sm:text-sm uppercase tracking-wider text-gray-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 transition shadow-md shadow-amber-500/20 cursor-pointer"
             >
