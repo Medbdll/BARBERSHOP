@@ -23,7 +23,7 @@ class UserResource extends JsonResource
             'google_id' => $this->google_id,
             'avatar' => $this->avatar,
             'status' => $this->status ?? 'active',
-            'profile_photo_url' => $this->profile_photo_url ?: $this->avatar,
+            'profile_photo_url' => $this->avatar ?: $this->profile_photo_url,
             'roles' => $this->relationLoaded('roles')
                 ? $this->roles->pluck('name')
                 : $this->getRoleNames(),

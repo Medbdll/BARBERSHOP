@@ -142,6 +142,15 @@ export const updateUserProfile = async ({ name, email, phone }) => {
   return response.data;
 };
 
+export const uploadProfileAvatar = async (formData) => {
+  const response = await api.post('/profile/avatar', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
 export const forgotPassword = async ({ email }) => {
   const response = await api.post('/forgot-password', { email });
   return response.data;

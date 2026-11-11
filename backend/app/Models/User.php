@@ -194,7 +194,7 @@ class User extends Authenticatable
                     'experience' => '5 ans',
                     'rating' => 5.0,
                     'bio' => 'Professionnel dédié aux rituels de soins masculins et coiffures modernes.',
-                    'image_url' => 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400',
+                    'image_url' => $this->avatar ?: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400',
                     'is_active' => true,
                 ]);
 

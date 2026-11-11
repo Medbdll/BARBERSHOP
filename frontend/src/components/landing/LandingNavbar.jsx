@@ -97,9 +97,17 @@ export default function LandingNavbar({
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                   className="flex items-center gap-2 p-1.5 rounded-xl bg-gray-900 border border-gray-800 hover:border-amber-500/50 transition cursor-pointer"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-600 to-amber-400 text-gray-950 font-bold text-xs flex items-center justify-center">
-                    {initials}
-                  </div>
+                  {user?.avatar ? (
+                    <img
+                      src={user.avatar}
+                      alt={user?.name || 'Avatar'}
+                      className="w-8 h-8 rounded-lg object-cover border border-[#D9822B]/60 shrink-0"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-600 to-amber-400 text-gray-950 font-bold text-xs flex items-center justify-center">
+                      {initials}
+                    </div>
+                  )}
                   <span className="text-xs font-semibold text-gray-200 pr-1 max-w-[120px] truncate">
                     {user?.name}
                   </span>

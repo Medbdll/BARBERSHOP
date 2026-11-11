@@ -4,6 +4,7 @@ import { useAuth } from '../../context/useAuth';
 import { useLanguage } from '../../context/LanguageContext';
 import BrandLogo from '../common/BrandLogo';
 import LanguageSwitcher from '../common/LanguageSwitcher';
+import AvatarUploader from '../common/AvatarUploader';
 import BookingModal from '../landing/BookingModal';
 import {
   getServices,
@@ -666,13 +667,18 @@ export default function ClientDashboard() {
     navigate('/login', { replace: true });
   };
 
-  const userInitials = useMemo(() => {
-    const parts = (user?.name || 'VIP').trim().split(/\s+/);
-    return parts
-      .slice(0, 2)
-      .map((p) => p[0]?.toUpperCase() || '')
-      .join('');
+  const userInitial = useMemo(() => {
+    const trimmed = (user?.name || 'B').trim();
+    return trimmed ? trimmed.charAt(0).toUpperCase() : 'B';
   }, [user?.name]);
+
+  const userAvatarUrl = useMemo(() => {
+    if (user?.avatar) return user.avatar;
+    if (user?.profile_photo_url && !user.profile_photo_url.includes('ui-avatars.com')) {
+      return user.profile_photo_url;
+    }
+    return null;
+  }, [user?.avatar, user?.profile_photo_url]);
 
   const navItems = useMemo(
     () => [
@@ -787,8 +793,12 @@ export default function ClientDashboard() {
           </div>
 
           <div className="flex items-center gap-3 p-2.5 rounded-xl bg-[#182030] border border-slate-800 text-start">
-            <div className="w-9 h-9 rounded-full bg-[#D9822B]/20 border border-[#D9822B]/40 text-[#D9822B] font-bold text-xs flex items-center justify-center shrink-0">
-              {userInitials}
+            <div className="w-9 h-9 rounded-full bg-[#10151F] border border-[#D9822B] text-[#D9822B] font-bold text-sm flex items-center justify-center overflow-hidden shrink-0">
+              {userAvatarUrl ? (
+                <img src={userAvatarUrl} alt={user?.name || 'Avatar'} className="w-full h-full object-cover" />
+              ) : (
+                userInitial
+              )}
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-xs font-bold text-white truncate">{user?.name}</div>
@@ -815,8 +825,12 @@ export default function ClientDashboard() {
       <header className="lg:hidden sticky top-0 z-40 bg-[#10151F]/95 backdrop-blur-xl border-b border-slate-800/90 px-4 py-3">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0 text-start">
-            <div className="w-9 h-9 rounded-full bg-[#D9822B]/20 border border-[#D9822B]/50 text-[#D9822B] font-bold text-xs flex items-center justify-center shrink-0">
-              {userInitials}
+            <div className="w-9 h-9 rounded-full bg-[#10151F] border border-[#D9822B] text-[#D9822B] font-bold text-sm flex items-center justify-center overflow-hidden shrink-0">
+              {userAvatarUrl ? (
+                <img src={userAvatarUrl} alt={user?.name || 'Avatar'} className="w-full h-full object-cover" />
+              ) : (
+                userInitial
+              )}
             </div>
             <div className="min-w-0">
               <div className="text-xs font-bold text-white truncate">{user?.name}</div>
@@ -1273,6 +1287,30 @@ export default function ClientDashboard() {
                 <div>
                   <h2 className="text-lg sm:text-xl font-bold text-white">{copy.profile.title}</h2>
                   <p className="text-xs text-slate-400 mt-1">{copy.profile.subtitle}</p>
+                </div>
+
+                {/* Circular Avatar Uploader */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl bg-[#10151F]/70 border border-slate-800/90">
+                  <AvatarUploader
+                    size="lg"
+                    showHint
+                    onUploadSuccess={() =>
+                      showToast(
+                        isAr ? 'تم تحديث صورة الملف الشخصي بنجاح.' : 'Photo de profil mise à jour !',
+                        'success'
+                      )
+                    }
+                    onError={(msg) => showToast(msg, 'error')}
+                  />
+                  <div className="min-w-0 space-y-1 text-start">
+                    <div className="text-sm font-bold text-white truncate">{user?.name}</div>
+                    <div className="text-xs text-slate-400 truncate">{user?.email}</div>
+                    <div className="text-xs font-semibold text-[#D9822B]">
+                      {isAr
+                        ? 'اضغط على الصورة أو أيقونة الكاميرا للتحديث الفوري'
+                        : 'Cliquez sur votre photo ou l’icône caméra pour la modifier'}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-4">

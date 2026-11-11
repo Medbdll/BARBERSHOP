@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ClientAppointmentController;
 use App\Http\Controllers\Api\EmployeScheduleController;
 use App\Http\Controllers\Api\GoogleAuthController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\PublicApiController;
 use Illuminate\Support\Facades\Route;
 
@@ -41,6 +42,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::put('/me', [AuthController::class, 'updateProfile']);
     Route::patch('/me', [AuthController::class, 'updateProfile']);
+    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar']);
     Route::get('/user', [AuthController::class, 'me']); // Backward compatibility
     Route::post('/logout', [AuthController::class, 'logout']);
 });
