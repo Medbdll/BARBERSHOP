@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
-import { getUserProfile } from '../../api/barberApi';
 import { useAuth } from '../../context/useAuth';
 
 export default function GoogleCallback() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { setUser } = useAuth();
+  const { setToken, fetchUser } = useAuth();
   const [statusMessage, setStatusMessage] = useState('Finalisation de la connexion Google...');
 
   useEffect(() => {
@@ -37,35 +36,24 @@ export default function GoogleCallback() {
       try {
         setStatusMessage('Vérification de vos privilèges...');
 
-        // 3. Store the Sanctum token in localStorage
-        localStorage.setItem('token', token);
+        // 1. setToken(token) updates both localStorage and React context state immediately
+        setToken(token);
 
         // Explicitly update Axios default headers for immediate subsequent calls
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-        // 4. Fetch authenticated user profile with Spatie roles and permissions
-        const response = await getUserProfile();
-        const profile = response?.user || response?.data || response;
+        // 2. Await fetchUser() (GET /api/me) to populate user in AuthContext BEFORE calling navigate()
+        const userObj = await fetchUser(token);
 
-        const roles = Array.isArray(profile?.roles)
-          ? profile.roles.map((r) => (typeof r === 'string' ? r : r.name))
-          : [];
+        if (isCancelled) return;
 
-        const permissions = Array.isArray(profile?.permissions)
-          ? profile.permissions.map((p) => (typeof p === 'string' ? p : p.name))
-          : [];
-
-        const userObj = {
-          ...profile,
-          roles,
-          permissions,
-        };
+        if (!userObj) {
+          throw new Error('Impossible de synchroniser le profil utilisateur.');
+        }
 
         // Check if user is marked as blocked
         if (userObj.status === 'blocked') {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          delete api.defaults.headers.common['Authorization'];
+          setToken(null);
           navigate(
             `/login?error=${encodeURIComponent('Votre compte client a été suspendu ou bloqué.')}`,
             { replace: true }
@@ -73,30 +61,37 @@ export default function GoogleCallback() {
           return;
         }
 
-        // Store user in localStorage & update global auth state
-        localStorage.setItem('user', JSON.stringify(userObj));
-        if (setUser) {
-          setUser(userObj);
+        const roles = Array.isArray(userObj?.roles)
+          ? userObj.roles.map((r) => (typeof r === 'string' ? r : r.name))
+          : [];
+
+        // 3. Check if there is a draft booking waiting in sessionStorage
+        let hasPendingBooking = false;
+        try {
+          hasPendingBooking = !!sessionStorage.getItem('pending_booking');
+        } catch {
+          // Ignore storage read errors
         }
 
-        if (isCancelled) return;
+        if (hasPendingBooking) {
+          navigate('/?booking=restore', { replace: true });
+          return;
+        }
 
-        // 5. Role-based redirection:
-        // admin -> /admin/dashboard
-        // employe -> /employe/planning
-        // client -> /client/dashboard
+        // 4. Role-based redirection:
+        // admin -> /admin
+        // employe -> /employe
+        // client -> /client
         if (roles.includes('admin')) {
-          navigate('/admin/dashboard', { replace: true });
+          navigate('/admin', { replace: true });
         } else if (roles.includes('employe')) {
-          navigate('/employe/planning', { replace: true });
+          navigate('/employe', { replace: true });
         } else {
-          navigate('/client/dashboard', { replace: true });
+          navigate('/client', { replace: true });
         }
       } catch (err) {
         console.error('Failed to authenticate Google user:', err);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        delete api.defaults.headers.common['Authorization'];
+        setToken(null);
 
         const errorMsg =
           err.response?.data?.message ||
@@ -112,7 +107,7 @@ export default function GoogleCallback() {
     return () => {
       isCancelled = true;
     };
-  }, [searchParams, navigate, setUser]);
+  }, [searchParams, navigate, setToken, fetchUser]);
 
   return (
     <div className="min-h-screen bg-[#0F141C] flex flex-col items-center justify-center p-6 text-center select-none font-sans">

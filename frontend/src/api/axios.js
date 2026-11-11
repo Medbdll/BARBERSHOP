@@ -65,13 +65,13 @@ const api = axios.create({
     Accept: 'application/json',
   },
   withCredentials: true,
-  timeout: 10000,
+  timeout: 25000,
 });
 
-// Request Interceptor: Attach Bearer token & active language to every request
+// Request Interceptor: Dynamically attach Bearer token from localStorage & active language to every request
 api.interceptors.request.use(
   (config) => {
-    // 1. Check if existing session has timed out (30 min inactive/left)
+    // 1. Dynamically read token from localStorage on every request
     const token = localStorage.getItem('token');
     if (token) {
       if (isClientSessionExpired()) {
@@ -80,8 +80,12 @@ api.interceptors.request.use(
         return Promise.reject(new axios.Cancel('Session expired after 30 minutes of inactivity.'));
       }
       config.headers.Authorization = `Bearer ${token}`;
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       // Refresh activity on outgoing authenticated requests
       recordClientActivity();
+    } else {
+      delete config.headers.Authorization;
+      delete api.defaults.headers.common['Authorization'];
     }
 
     // 2. Attach active application language from localStorage (FR | AR)

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { AuthContext } from './AuthContextInstance';
+import api from '../api/axios';
 import { getUserProfile, loginUser, registerUser, logoutUser } from '../api/barberApi';
 import {
   isClientSessionExpired,
@@ -17,7 +18,7 @@ export function AuthProvider({ children }) {
   }
 
   // Synchronously initialize token and user from localStorage so there is zero flicker on refresh
-  const [token, setToken] = useState(() => {
+  const [token, setTokenState] = useState(() => {
     try {
       if (isClientSessionExpired()) return null;
       return localStorage.getItem('token') || null;
@@ -25,6 +26,23 @@ export function AuthProvider({ children }) {
       return null;
     }
   });
+
+  const setToken = useCallback((newToken) => {
+    try {
+      if (newToken) {
+        localStorage.setItem('token', newToken);
+        localStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
+        localStorage.removeItem(SESSION_EXPIRED_KEY);
+        api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+      } else {
+        localStorage.removeItem('token');
+        delete api.defaults.headers.common['Authorization'];
+      }
+    } catch (e) {
+      console.warn('Error syncing token to localStorage:', e);
+    }
+    setTokenState(newToken || null);
+  }, []);
 
   const [user, setUser] = useState(() => {
     try {
@@ -64,11 +82,59 @@ export function AuthProvider({ children }) {
       // Ignore network errors when forcing logout
     } finally {
       clearClientSession(isExpired);
-      setToken(null);
+      setTokenState(null);
       setUser(null);
       if (isExpired) {
         setSessionExpired(true);
       }
+    }
+  }, []);
+
+  // Fetch / sync authenticated user profile from GET /api/me
+  const fetchUser = useCallback(async (tokenOverride = null) => {
+    const activeToken = tokenOverride || localStorage.getItem('token');
+    if (!activeToken) {
+      setUser(null);
+      setLoading(false);
+      return null;
+    }
+
+    try {
+      setLoading(true);
+      if (tokenOverride) {
+        localStorage.setItem('token', tokenOverride);
+        setTokenState(tokenOverride);
+      }
+      api.defaults.headers.common['Authorization'] = `Bearer ${activeToken}`;
+      const res = await getUserProfile();
+      const profile = res?.user || res?.data || res;
+      const roles = Array.isArray(profile?.roles)
+        ? profile.roles.map((r) => (typeof r === 'string' ? r : r.name))
+        : [];
+      const permissions = Array.isArray(profile?.permissions)
+        ? profile.permissions.map((p) => (typeof p === 'string' ? p : p.name))
+        : [];
+
+      const userObj = {
+        ...profile,
+        roles,
+        permissions,
+      };
+
+      localStorage.setItem('user', JSON.stringify(userObj));
+      setUser(userObj);
+      recordClientActivity();
+      return userObj;
+    } catch (err) {
+      console.error('fetchUser error:', err);
+      if (err.response?.status === 401) {
+        clearClientSession(true);
+        setTokenState(null);
+        setUser(null);
+      }
+      throw err;
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -84,7 +150,7 @@ export function AuthProvider({ children }) {
           if (isMounted) setSessionExpired(true);
         }
         if (isMounted) {
-          setToken(null);
+          setTokenState(null);
           setUser(null);
           setLoading(false);
         }
@@ -92,37 +158,10 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        const res = await getUserProfile();
-        const profile = res?.data || res;
-        if (isMounted) {
-          const userObj = {
-            ...profile,
-            roles: profile.roles || res?.roles || [],
-            permissions: profile.permissions || res?.permissions || [],
-          };
-          setUser(userObj);
-          localStorage.setItem('user', JSON.stringify(userObj));
-          recordClientActivity();
-        }
+        await fetchUser(storedToken);
       } catch (err) {
-        // ONLY clear credentials if server explicitly returned 401 Unauthorized
-        if (err.response?.status === 401) {
-          console.warn('Session expired or token invalid (401). Clearing stored credentials.');
-          const isTimeout = err.response?.data?.session_expired || isClientSessionExpired();
-          clearClientSession(isTimeout);
-          if (isMounted) {
-            setToken(null);
-            setUser(null);
-            if (isTimeout) setSessionExpired(true);
-          }
-        } else {
-          // If offline / network error / timeout, keep cached user so page refresh doesn't log them out
-          console.warn('Could not re-verify profile with server, keeping cached session:', err.message);
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        // If offline / network error / timeout, keep cached user so page refresh doesn't log them out
+        console.warn('Could not re-verify profile with server, keeping cached session:', err.message);
       }
     };
 
@@ -131,7 +170,7 @@ export function AuthProvider({ children }) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [fetchUser]);
 
   // Inactivity timeout & leave detection (30 minutes)
   useEffect(() => {
@@ -288,6 +327,18 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const updateUser = useCallback((updatedUserData) => {
+    setUser((prev) => {
+      const merged = { ...prev, ...updatedUserData };
+      try {
+        localStorage.setItem('user', JSON.stringify(merged));
+      } catch (e) {
+        console.error('Failed to update user in localStorage', e);
+      }
+      return merged;
+    });
+  }, []);
+
   const roles = useMemo(() => {
     if (!user) return [];
     if (Array.isArray(user.roles)) {
@@ -326,14 +377,20 @@ export function AuthProvider({ children }) {
     return '/';
   }, [isAdmin, isEmploye, isClient]);
 
-  // User is authenticated if token exists AND user object is present
-  const isAuthenticated = !!(token && user);
+  // User is authenticated if token exists AND user object is present (checking state + localStorage fallback for race-condition immunity)
+  const isAuthenticated = useMemo(() => {
+    const hasToken = !!(token || (typeof window !== 'undefined' && localStorage.getItem('token')));
+    const hasUser = !!(user || (typeof window !== 'undefined' && localStorage.getItem('user')));
+    return hasToken && hasUser;
+  }, [token, user]);
 
   return (
     <AuthContext.Provider
       value={{
         user,
         token,
+        setToken,
+        fetchUser,
         roles,
         permissions,
         hasRole,
@@ -351,6 +408,7 @@ export function AuthProvider({ children }) {
         register,
         logout,
         setUser,
+        updateUser,
       }}
     >
       {children}

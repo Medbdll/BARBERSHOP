@@ -52,6 +52,19 @@ export default function LandingPage({ onOpenAuth }) {
     };
   }, []);
 
+  useEffect(() => {
+    // Automatically open booking stepper if user returns from login with a draft booking
+    try {
+      const pending = sessionStorage.getItem('pending_booking');
+      const params = new URLSearchParams(window.location.search);
+      if (pending || params.get('booking') === 'restore') {
+        setBookingModalOpen(true);
+      }
+    } catch {
+      // Ignore sessionStorage errors
+    }
+  }, []);
+
   const handleOpenBooking = () => {
     setBookingModalOpen(true);
   };

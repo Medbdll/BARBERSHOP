@@ -49,33 +49,65 @@ class PublicApiController extends Controller
     }
 
     /**
-     * GET /api/barbers
-     * Fetch all active barbers with working hours.
-     * Cached for 1 hour.
+     * GET /api/barbers?date=YYYY-MM-DD
+     * Fetch all active barbers with working hours and live queue counter ("Ch7al ba9ilo dyal bnadem").
      */
-    public function barbers(): JsonResponse
+    public function barbers(Request $request): JsonResponse
     {
-        $data = Cache::remember('public_barbers_list', 3600, function () {
-            $barbers = Barber::where('is_active', true)
-                ->where(function ($q) {
-                    $q->whereNull('user_id')
-                      ->orWhereHas('user', function ($uq) {
-                          $uq->whereHas('roles', function ($rq) {
-                              $rq->whereIn('name', ['employe', 'employee']);
-                          });
-                      });
-                })
-                ->select(['id', 'user_id', 'name', 'bio', 'specialty', 'experience', 'rating', 'image_url', 'is_active'])
-                ->with(['workingHours:id,barber_id,day_of_week,start_time,end_time,break_start,break_end,is_day_off'])
-                ->orderBy('rating', 'desc')
-                ->get();
+        $dateParam = $request->query('date');
+        $targetDate = $dateParam ? Carbon::parse($dateParam)->toDateString() : Carbon::today()->toDateString();
+        $isToday = $targetDate === Carbon::today()->toDateString();
+        $currentTime = Carbon::now()->format('H:i:s');
 
-            return BarberResource::collection($barbers)->resolve();
-        });
+        $barbers = Barber::where('is_active', true)
+            ->where(function ($q) {
+                $q->whereNull('user_id')
+                  ->orWhereHas('user', function ($uq) {
+                      $uq->whereHas('roles', function ($rq) {
+                          $rq->whereIn('name', ['employe', 'employee']);
+                      });
+                  });
+            })
+            ->select(['id', 'user_id', 'name', 'bio', 'specialty', 'experience', 'rating', 'image_url', 'is_active'])
+            ->with(['workingHours:id,barber_id,day_of_week,start_time,end_time,break_start,break_end,is_day_off'])
+            ->orderBy('rating', 'desc')
+            ->get();
+
+        // Calculate upcoming / active appointments for each barber on the selected date
+        $appointments = Appointment::whereIn('barber_id', $barbers->pluck('id'))
+            ->whereDate('appointment_date', $targetDate)
+            ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
+            ->when($isToday, function ($q) use ($currentTime) {
+                $q->where('end_time', '>=', $currentTime);
+            })
+            ->with('service:id,duration')
+            ->orderBy('start_time', 'asc')
+            ->get()
+            ->groupBy('barber_id');
+
+        foreach ($barbers as $barber) {
+            $barberAppts = $appointments->get($barber->id, collect());
+            $count = $barberAppts->count();
+            $waitMinutes = $barberAppts->sum(function ($appt) {
+                return (int) ($appt->service->duration ?? 30);
+            });
+
+            $barber->waiting_clients_count = $count;
+            $barber->estimated_wait_minutes = $waitMinutes;
+
+            if ($waitMinutes >= 60) {
+                $hours = floor($waitMinutes / 60);
+                $mins = $waitMinutes % 60;
+                $barber->waiting_badge = $mins > 0 ? "{$hours}h" . str_pad($mins, 2, '0', STR_PAD_LEFT) : "{$hours}h";
+            } else {
+                $barber->waiting_badge = "{$waitMinutes}min";
+            }
+        }
 
         return response()->json([
             'status' => 'success',
-            'data' => $data,
+            'data' => BarberResource::collection($barbers)->resolve(),
+            'date' => $targetDate,
         ]);
     }
 
