@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import DashboardLayout from '../layout/DashboardLayout';
 import { useAuth } from '../../context/useAuth';
 import {
@@ -23,8 +23,10 @@ export default function ClientPortal() {
   const [appointmentsData, setAppointmentsData] = useState({ upcoming: [], history: [] });
   const [summaryStats, setSummaryStats] = useState(null);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
-  const [lastSyncTime, setLastSyncTime] = useState(new Date());
-  const [scheduleClock, setScheduleClock] = useState(new Date());
+  const [lastSyncTime, setLastSyncTime] = useState(() => new Date());
+  const [scheduleClock, setScheduleClock] = useState(() => new Date());
+  const prevQueueRef = useRef({});
+  const [queueDropHighlights, setQueueDropHighlights] = useState({});
 
   // Data states (catalogs)
   const [services, setServices] = useState([]);
@@ -76,6 +78,32 @@ export default function ClientPortal() {
     try {
       const res = await getClientAppointments();
       if (res.status === 'success') {
+        const upcomingList = res.data?.upcoming || [];
+        const droppedMap = {};
+        const nextQueueMap = {};
+
+        upcomingList.forEach((appt) => {
+          const prevVal = prevQueueRef.current[appt.id];
+          const currVal = Number(appt.people_ahead ?? 0);
+          nextQueueMap[appt.id] = currVal;
+
+          if (prevVal !== undefined && currVal < prevVal) {
+            droppedMap[appt.id] = { from: prevVal, to: currVal };
+          }
+        });
+        prevQueueRef.current = nextQueueMap;
+
+        if (Object.keys(droppedMap).length > 0) {
+          setQueueDropHighlights((prev) => ({ ...prev, ...droppedMap }));
+          setTimeout(() => {
+            setQueueDropHighlights((prev) => {
+              const updated = { ...prev };
+              Object.keys(droppedMap).forEach((id) => delete updated[id]);
+              return updated;
+            });
+          }, 4500);
+        }
+
         setAppointmentsData(res.data || { upcoming: [], history: [] });
         setSummaryStats(res.summary_stats || null);
         setLastSyncTime(new Date());
@@ -110,13 +138,38 @@ export default function ClientPortal() {
     loadAppointments(false);
   }, [loadAppointments]);
 
-  // Automatic background polling every 20 seconds for real-time status updates
+  const todayStr = getTodayDateString();
+  const hasActiveAppointmentToday = useMemo(() => {
+    return (appointmentsData.upcoming || []).some(
+      (appt) =>
+        appt.appointment_date === todayStr &&
+        ['pending', 'confirmed', 'in_progress'].includes(appt.status)
+    );
+  }, [appointmentsData.upcoming, todayStr]);
+
+  // Automatic background polling every 15 seconds while tab is visible and client has an active appointment today
   useEffect(() => {
+    if (!hasActiveAppointmentToday) return undefined;
+
     const pollInterval = setInterval(() => {
-      loadAppointments(true); // silent fetch without layout flicker
-    }, 20000);
-    return () => clearInterval(pollInterval);
-  }, [loadAppointments]);
+      if (document.visibilityState === 'visible') {
+        loadAppointments(true); // silent fetch without layout flicker
+      }
+    }, 15000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadAppointments(true);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(pollInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [hasActiveAppointmentToday, loadAppointments]);
 
   // Dynamic relative schedule countdown ticker (ticks every 60s without full-app re-renders)
   useEffect(() => {
@@ -407,6 +460,88 @@ export default function ClientPortal() {
       )
     : null;
 
+  // Render 3-state live queue counter ("people_ahead" & "is_my_turn_now")
+  const renderLiveQueueBadge = (appt) => {
+    if (!appt || !['pending', 'confirmed'].includes(appt.status)) return null;
+
+    const peopleAhead = Number(appt.people_ahead ?? 0);
+    const waitMinutes = Number(appt.estimated_wait_minutes ?? 0);
+    const isMyTurnNow = Boolean(appt.is_my_turn_now);
+    const dropInfo = queueDropHighlights[appt.id];
+
+    // Case 1: people_ahead === 0 AND today within <= 30 minutes of start time
+    if (isMyTurnNow) {
+      return (
+        <div
+          className={`mt-3 px-3.5 py-2 rounded-xl border bg-emerald-500/20 border-emerald-500/50 text-emerald-300 text-xs font-bold flex flex-wrap items-center justify-between gap-2 transition-all duration-500 ${
+            dropInfo ? 'ring-2 ring-emerald-400 scale-[1.02] shadow-lg shadow-emerald-950/40' : ''
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2.5 w-2.5 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400" />
+            </span>
+            <span>🟢 C'est votre tour ! Le barbier vous attend.</span>
+          </div>
+          {dropInfo && (
+            <span className="px-2 py-0.5 rounded-full bg-emerald-400/20 border border-emerald-400/40 text-emerald-200 text-[10px] font-mono animate-pulse">
+              ↓ {dropInfo.from} → 0
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    // Case 2: people_ahead === 0 BUT > 30 min left or on a future date
+    if (peopleAhead === 0) {
+      return (
+        <div
+          className={`mt-3 px-3.5 py-2 rounded-xl border bg-gradient-to-r from-sky-500/15 to-amber-500/15 border-amber-500/40 text-amber-200 text-xs font-semibold flex flex-wrap items-center justify-between gap-2 transition-all duration-500 ${
+            dropInfo ? 'ring-2 ring-sky-400/70 scale-[1.02]' : ''
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-sky-400 shrink-0" />
+            <span>
+              ✨ Vous êtes le 1er sur ce créneau (RDV prévu à {appt.start_time})
+            </span>
+          </div>
+          {dropInfo && (
+            <span className="px-2 py-0.5 rounded-full bg-sky-400/20 border border-sky-400/40 text-sky-200 text-[10px] font-mono">
+              ↓ {dropInfo.from} → 0
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    // Case 3: people_ahead > 0
+    return (
+      <div
+        className={`mt-3 px-3.5 py-2 rounded-xl border bg-amber-500/15 border-amber-500/40 text-amber-300 text-xs font-semibold flex flex-wrap items-center justify-between gap-2 transition-all duration-500 ${
+          dropInfo ? 'ring-2 ring-emerald-400/80 border-emerald-400/60 bg-emerald-500/10 scale-[1.02]' : ''
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+          <span>
+            ⏳ Personnes avant vous :{' '}
+            <span className="inline-block font-bold transition-transform duration-300">
+              {peopleAhead}
+            </span>
+            {waitMinutes > 0 ? ` (~${waitMinutes} min)` : ''}
+          </span>
+        </div>
+        {dropInfo && (
+          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-mono font-bold animate-bounce">
+            ↓ File avancée ({dropInfo.from} → {dropInfo.to})
+          </span>
+        )}
+      </div>
+    );
+  };
+
   return (
     <DashboardLayout
       title="Espace Client Privilège"
@@ -473,7 +608,7 @@ export default function ClientPortal() {
               {/* Live Real-time Sync Status */}
               <div
                 className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-900/90 border border-gray-800 text-[10px] font-mono text-gray-400"
-                title={`Actualisation automatique toutes les 20s. Dernière synchro : ${lastSyncTime.toLocaleTimeString('fr-FR')}`}
+                title={`Actualisation automatique toutes les 15s. Dernière synchro : ${lastSyncTime.toLocaleTimeString('fr-FR')}`}
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                 <span>En direct</span>
@@ -525,6 +660,9 @@ export default function ClientPortal() {
                     {nextAppt.total_price || nextAppt.price} MAD
                   </div>
                 </div>
+
+                {/* Live Queue Position Counter */}
+                {renderLiveQueueBadge(nextAppt)}
               </div>
             </div>
 
@@ -1356,6 +1494,11 @@ export default function ClientPortal() {
                                 +{Math.round((appt.total_price || 0) * 0.1)} pts cumulés
                               </div>
                             </div>
+                          </div>
+
+                          {/* Live Queue Counter ("people_ahead") */}
+                          <div className="mb-4">
+                            {renderLiveQueueBadge(appt)}
                           </div>
 
                           {appt.notes && (

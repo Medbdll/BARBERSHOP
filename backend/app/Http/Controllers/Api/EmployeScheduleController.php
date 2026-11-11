@@ -267,19 +267,19 @@ class EmployeScheduleController extends Controller
             'status' => ['required', 'in:pending,confirmed,in_progress,completed,cancelled,no_show'],
         ]);
 
-        $barber = $this->getBarber($request);
         $user = $request->user();
-
-        if (! $barber) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Aucun profil de barbier associé à ce compte employé.',
-            ], 403);
-        }
-
         $query = Appointment::where('id', $id);
 
         if (! $user->hasRole('admin')) {
+            $barber = $this->getBarber($request);
+
+            if (! $barber) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Aucun profil de barbier associé à ce compte employé.',
+                ], 403);
+            }
+
             $query->where('barber_id', $barber->id);
         }
 
@@ -297,10 +297,9 @@ class EmployeScheduleController extends Controller
             'status' => $request->status,
         ]);
 
-        // If completed and not previously completed, reward loyalty points
+        // If completed and not previously completed, increment loyalty points (+1)
         if ($request->status === 'completed' && $oldStatus !== 'completed' && $appointment->client) {
-            $points = (int) round($appointment->total_price * 0.1);
-            $appointment->client->increment('loyalty_points', $points > 0 ? $points : 20);
+            $appointment->client->increment('loyalty_points', 1);
         }
 
         return response()->json([

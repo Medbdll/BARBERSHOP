@@ -54,9 +54,10 @@ Route::middleware(['auth:sanctum', 'role:client'])->prefix('client')->group(func
     Route::get('/loyalty', [ClientAppointmentController::class, 'loyalty']);
 });
 
-// Direct booking route for authenticated users
+// Direct booking route & queue status for authenticated users
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/appointments', [AppointmentController::class, 'store']);
+    Route::get('/client/appointments/{id}/queue-status', [ClientAppointmentController::class, 'queueStatus']);
 });
 
 // ========================================================

@@ -158,6 +158,11 @@ export const getClientAppointments = async () => {
   return response.data;
 };
 
+export const getClientAppointmentQueueStatus = async (id) => {
+  const response = await api.get(`/client/appointments/${id}/queue-status`);
+  return response.data;
+};
+
 export const cancelClientAppointment = async (id, reason = '') => {
   const response = await api.patch(`/client/appointments/${id}/cancel`, { reason });
   return response.data;
