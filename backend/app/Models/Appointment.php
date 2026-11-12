@@ -20,14 +20,78 @@ class Appointment extends Model
         'start_time',
         'end_time',
         'status',
+        'subtotal_price',
+        'points_used',
+        'discount_amount',
         'total_price',
+        'points_earned',
+        'points_credited',
         'notes',
     ];
 
     protected $casts = [
         'appointment_date' => 'date',
+        'subtotal_price' => 'float',
+        'points_used' => 'integer',
+        'discount_amount' => 'float',
         'total_price' => 'float',
+        'points_earned' => 'integer',
+        'points_credited' => 'boolean',
     ];
+
+    /**
+     * Compute loyalty points earned for a given paid MAD amount (100 MAD = 20 pts, i.e. 1 pt per 5 MAD).
+     */
+    public static function calculateEarnedPointsForAmount(float $paidAmount): int
+    {
+        if ($paidAmount <= 0) {
+            return 0;
+        }
+
+        return (int) floor(round(($paidAmount / 100) * 20, 6));
+    }
+
+    /**
+     * Credit loyalty cashback points once when the appointment is marked completed.
+     * Guards against double crediting using `points_credited`.
+     */
+    public function creditLoyaltyPoints(): int
+    {
+        if ($this->points_credited) {
+            return 0;
+        }
+
+        $earned = static::calculateEarnedPointsForAmount((float) $this->total_price);
+
+        $this->update([
+            'points_earned' => $earned,
+            'points_credited' => true,
+        ]);
+
+        if ($earned > 0 && $this->client) {
+            $this->client->increment('loyalty_points', $earned);
+        }
+
+        return $earned;
+    }
+
+    /**
+     * Refund any redeemed loyalty points when transitioning an appointment to 'cancelled'.
+     */
+    public function refundRedeemedPoints(string $previousStatus): int
+    {
+        $used = (int) ($this->points_used ?? 0);
+
+        if ($used <= 0 || $previousStatus === 'cancelled') {
+            return 0;
+        }
+
+        if ($this->client) {
+            $this->client->increment('loyalty_points', $used);
+        }
+
+        return $used;
+    }
 
     protected $appends = [
         'people_ahead',

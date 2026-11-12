@@ -17,6 +17,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -292,15 +293,21 @@ class AdminApiController extends Controller
         ]);
 
         $appointment = Appointment::with(['client', 'barber', 'service'])->findOrFail($id);
-        $oldStatus = $appointment->status;
-        $appointment->update([
-            'status' => $request->status,
-        ]);
 
-        // If completed and not previously completed, increment loyalty points (+1)
-        if ($request->status === 'completed' && $oldStatus !== 'completed' && $appointment->client) {
-            $appointment->client->increment('loyalty_points', 1);
-        }
+        DB::transaction(function () use ($appointment, $request) {
+            $lockedAppt = Appointment::with('client')->where('id', $appointment->id)->lockForUpdate()->firstOrFail();
+            $oldStatus = $lockedAppt->status;
+
+            $lockedAppt->update([
+                'status' => $request->status,
+            ]);
+
+            if ($request->status === 'completed') {
+                $lockedAppt->creditLoyaltyPoints();
+            } elseif ($request->status === 'cancelled') {
+                $lockedAppt->refundRedeemedPoints($oldStatus);
+            }
+        });
 
         return response()->json([
             'status' => 'success',

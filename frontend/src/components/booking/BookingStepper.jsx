@@ -122,6 +122,7 @@ export default function BookingStepper({
   const [clientPhone, setClientPhone] = useState('');
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [clientNotes, setClientNotes] = useState('');
+  const [useLoyaltyPoints, setUseLoyaltyPoints] = useState(false);
 
   // Submission & Results
   const [submitting, setSubmitting] = useState(false);
@@ -248,6 +249,29 @@ export default function BookingStepper({
   const totalPrice = useMemo(() => {
     return selectedServices.reduce((sum, s) => sum + (parseFloat(s.price) || 0), 0);
   }, [selectedServices]);
+
+  const userLoyaltyPoints = Number(user?.loyalty_points || 0);
+  const canRedeemLoyalty = isAuthenticated && userLoyaltyPoints >= 10 && totalPrice >= 1;
+
+  const {
+    maxUsableLoyaltyPoints,
+    appliedDiscountMad,
+    finalTotalPrice,
+    expectedCashbackPoints,
+  } = useMemo(() => {
+    const maxFromBalanceMad = Math.floor(userLoyaltyPoints / 10);
+    const maxApplicableDiscount = Math.min(maxFromBalanceMad, Math.floor(totalPrice));
+    const usablePoints = maxApplicableDiscount * 10;
+    const discount = useLoyaltyPoints && canRedeemLoyalty ? maxApplicableDiscount : 0;
+    const finalTotal = Math.max(0, Math.round((totalPrice - discount) * 100) / 100);
+    const cashback = Math.floor(Number(((finalTotal / 100) * 20).toFixed(6)));
+    return {
+      maxUsableLoyaltyPoints: usablePoints,
+      appliedDiscountMad: discount,
+      finalTotalPrice: finalTotal,
+      expectedCashbackPoints: cashback,
+    };
+  }, [userLoyaltyPoints, totalPrice, useLoyaltyPoints, canRedeemLoyalty]);
 
   // Fetch available slots when entering step 3+ or changing barber/date/duration
   const fetchSlots = useCallback(async () => {
@@ -386,6 +410,7 @@ export default function BookingStepper({
         start_time: selectedSlot,
         phone: finalPhone || user?.phone || null,
         notes: clientNotes || null,
+        use_loyalty_points: Boolean(useLoyaltyPoints && canRedeemLoyalty),
       };
 
       const res = await bookAppointment(payload);
@@ -411,16 +436,46 @@ export default function BookingStepper({
         droppedFrom: null,
       });
 
+      const confirmedTotalPrice = Number(
+        res.total_price ?? res.data?.total_price ?? finalTotalPrice
+      );
+      const confirmedSubtotalPrice = Number(
+        res.subtotal_price ?? res.data?.subtotal_price ?? totalPrice
+      );
+      const confirmedDiscount = Number(
+        res.discount_amount ?? res.data?.discount_amount ?? appliedDiscountMad
+      );
+      const confirmedPointsUsed = Number(
+        res.points_used ??
+          res.data?.points_used ??
+          (useLoyaltyPoints && canRedeemLoyalty ? maxUsableLoyaltyPoints : 0)
+      );
+      const confirmedExpectedCashback = Number(
+        res.estimated_points_to_earn ??
+          res.data?.estimated_points_to_earn ??
+          expectedCashbackPoints
+      );
+      const confirmedCurrentPoints = Number(
+        res.current_loyalty_points ??
+          res.user?.loyalty_points ??
+          Math.max(0, userLoyaltyPoints - confirmedPointsUsed)
+      );
+
       setConfirmedBooking({
         appointment: res.data,
         services: selectedServices,
         barber: selectedBarber,
         date: selectedDate,
         slot: selectedSlot,
-        pointsEarned: res.loyalty_points_earned || 15,
-        totalPoints: res.current_loyalty_points || (user?.loyalty_points || 50) + 15,
+        subtotalPrice: confirmedSubtotalPrice,
+        discountAmount: confirmedDiscount,
+        pointsUsed: confirmedPointsUsed,
+        totalPrice: confirmedTotalPrice,
+        expectedCashback: confirmedExpectedCashback,
+        totalPoints: confirmedCurrentPoints,
       });
 
+      setUseLoyaltyPoints(false);
       setCurrentStep(5);
 
       if (onBookingSuccess) {
@@ -455,6 +510,14 @@ export default function BookingStepper({
     selectedServices,
     selectedBarber,
     clientNotes,
+    useLoyaltyPoints,
+    canRedeemLoyalty,
+    finalTotalPrice,
+    totalPrice,
+    appliedDiscountMad,
+    maxUsableLoyaltyPoints,
+    expectedCashbackPoints,
+    userLoyaltyPoints,
     updateUser,
     onBookingSuccess,
     fetchSlots,
@@ -1302,6 +1365,65 @@ export default function BookingStepper({
                           className="w-full px-3.5 py-2.5 rounded-xl bg-gray-900 border border-gray-700 text-white text-base sm:text-sm text-start placeholder-gray-500 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition resize-none"
                         />
                       </div>
+
+                      {/* Loyalty Cashback Redemption Toggle (Authenticated users with >= 10 pts) */}
+                      {userLoyaltyPoints >= 10 && (
+                        <div className="pt-1">
+                          <div
+                            className={`p-3.5 sm:p-4 rounded-2xl border transition-all ${
+                              useLoyaltyPoints && canRedeemLoyalty
+                                ? 'bg-amber-500/15 border-amber-500/60 shadow-lg shadow-amber-500/10'
+                                : 'bg-gray-900/90 border-amber-500/25 hover:border-amber-500/45'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="min-w-0 text-start space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-amber-400 text-sm shrink-0">★</span>
+                                  <span className="text-xs sm:text-sm font-bold text-white leading-snug">
+                                    {isAr
+                                      ? `استخدام رصيدي (${userLoyaltyPoints} نقطة = -${Math.floor(userLoyaltyPoints / 10)} ${t.common.currency})`
+                                      : `Utiliser mes ${userLoyaltyPoints} points (-${Math.floor(userLoyaltyPoints / 10)} MAD)`}
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-gray-400 leading-relaxed">
+                                  {useLoyaltyPoints && canRedeemLoyalty
+                                    ? isAr
+                                      ? `سيتم خصم ${maxUsableLoyaltyPoints} نقطة (-${appliedDiscountMad} ${t.common.currency})`
+                                      : `${maxUsableLoyaltyPoints} pts utilisés • Réduction appliquée : -${appliedDiscountMad} ${t.common.currency}`
+                                    : Math.floor(userLoyaltyPoints / 10) > Math.floor(totalPrice)
+                                      ? isAr
+                                        ? `الحد الأقصى للخصم على هذا الموعد : -${Math.floor(totalPrice)} ${t.common.currency} (${Math.floor(totalPrice) * 10} نقطة)`
+                                        : `Max applicable sur ce RDV : -${Math.floor(totalPrice)} ${t.common.currency} (${Math.floor(totalPrice) * 10} pts)`
+                                      : isAr
+                                        ? '10 نقاط = 1 د.م تخفيض • 100 د.م = 20 نقطة'
+                                        : '10 pts = 1 MAD de réduction • 100 MAD = 20 pts'}
+                                </p>
+                              </div>
+
+                              <button
+                                type="button"
+                                role="switch"
+                                aria-checked={Boolean(useLoyaltyPoints && canRedeemLoyalty)}
+                                disabled={!canRedeemLoyalty}
+                                onClick={() => setUseLoyaltyPoints((prev) => !prev)}
+                                className={`relative inline-flex items-center w-12 h-7 p-1 rounded-full shrink-0 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                                  useLoyaltyPoints && canRedeemLoyalty
+                                    ? 'bg-amber-500 justify-end shadow-inner'
+                                    : 'bg-gray-700 justify-start'
+                                }`}
+                                aria-label={
+                                  isAr
+                                    ? 'تفعيل خصم نقاط الولاء'
+                                    : 'Activer la réduction points de fidélité'
+                                }
+                              >
+                                <span className="w-5 h-5 rounded-full bg-white shadow-md transition-transform" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -1351,15 +1473,37 @@ export default function BookingStepper({
                         </span>
                       </div>
 
+                      {appliedDiscountMad > 0 && (
+                        <>
+                          <div className="py-2 flex items-center justify-between gap-3 text-gray-400">
+                            <span>{isAr ? 'المبلغ الفرعي' : 'Sous-total'}</span>
+                            <span className="line-through">
+                              {totalPrice} {t.common.currency}
+                            </span>
+                          </div>
+                          <div className="py-2 flex items-center justify-between gap-3 text-emerald-400 font-semibold">
+                            <span>
+                              {isAr
+                                ? `خصم الولاء (-${maxUsableLoyaltyPoints} نقطة)`
+                                : `Fidélité (-${maxUsableLoyaltyPoints} pts)`}
+                            </span>
+                            <span>
+                              -{appliedDiscountMad} {t.common.currency}
+                            </span>
+                          </div>
+                        </>
+                      )}
+
                       <div className="pt-2 flex items-center justify-between gap-3">
                         <div>
                           <div className="text-gray-400">{t.bookingModal.summaryPrice}</div>
                           <div className="text-[11px] text-amber-500 font-semibold">
-                            +15 {t.bookingModal.loyaltyPoints}
+                            +{expectedCashbackPoints}{' '}
+                            {isAr ? 'نقطة عند إتمام الحجز' : 'pts fidélité après visite'}
                           </div>
                         </div>
                         <div className="text-lg font-black text-amber-400 font-serif">
-                          {totalPrice} {t.common.currency}
+                          {finalTotalPrice} {t.common.currency}
                         </div>
                       </div>
                     </div>
@@ -1507,17 +1651,39 @@ export default function BookingStepper({
                     </span>
                   </div>
 
+                  {appliedDiscountMad > 0 && (
+                    <>
+                      <div className="flex items-center justify-between text-xs text-gray-400">
+                        <span>{isAr ? 'المبلغ الفرعي' : 'Sous-total'}</span>
+                        <span className="line-through">
+                          {totalPrice} {t.common.currency}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-emerald-400 font-semibold">
+                        <span>
+                          {isAr
+                            ? `خصم الولاء (-${maxUsableLoyaltyPoints} نقطة)`
+                            : `Fidélité (-${maxUsableLoyaltyPoints} pts)`}
+                        </span>
+                        <span>
+                          -{appliedDiscountMad} {t.common.currency}
+                        </span>
+                      </div>
+                    </>
+                  )}
+
                   <div className="flex items-center justify-between pt-1">
                     <div>
                       <div className="text-gray-300 font-medium">
                         {t.bookingModal.summaryPrice}
                       </div>
                       <div className="text-[11px] text-amber-500 font-semibold">
-                        +15 {t.bookingModal.loyaltyPoints}
+                        +{expectedCashbackPoints}{' '}
+                        {isAr ? 'نقطة عند إتمام الحجز' : 'pts fidélité après visite'}
                       </div>
                     </div>
                     <div className="text-2xl font-black text-amber-400 font-serif">
-                      {totalPrice} {t.common.currency}
+                      {finalTotalPrice} {t.common.currency}
                     </div>
                   </div>
                 </div>
@@ -1566,8 +1732,15 @@ export default function BookingStepper({
         <div className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-gray-950/95 backdrop-blur-xl border-t border-gray-800/90 px-4 py-3 shadow-[0_-10px_30px_rgba(0,0,0,0.65)]">
           <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
             <div className="min-w-0 text-start">
-              <div className="text-base sm:text-lg font-black text-amber-400 font-serif truncate leading-tight">
-                {totalPrice} {t.common.currency}
+              <div className="flex items-baseline gap-1.5 flex-wrap leading-tight">
+                <span className="text-base sm:text-lg font-black text-amber-400 font-serif truncate">
+                  {finalTotalPrice} {t.common.currency}
+                </span>
+                {appliedDiscountMad > 0 && (
+                  <span className="text-[11px] text-emerald-400 font-semibold whitespace-nowrap">
+                    (-{appliedDiscountMad} {t.common.currency})
+                  </span>
+                )}
               </div>
               <div className="text-xs text-gray-400 flex items-center gap-1.5 truncate mt-0.5">
                 <span>⏱ {totalDuration} {t.common.minutes}</span>
@@ -1644,10 +1817,46 @@ export default function BookingStepper({
               <span className="text-gray-400">{t.bookingModal.summaryBarber}</span>
               <span className="text-white font-medium">{confirmedBooking.barber?.name}</span>
             </div>
+            {confirmedBooking.discountAmount > 0 && (
+              <>
+                <div className="flex items-center justify-between gap-2 text-gray-400">
+                  <span>{isAr ? 'المبلغ الفرعي' : 'Sous-total'}</span>
+                  <span className="line-through">
+                    {confirmedBooking.subtotalPrice} {t.common.currency}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-emerald-400">
+                    {isAr
+                      ? `خصم الولاء (-${confirmedBooking.pointsUsed} نقطة)`
+                      : `Réduction fidélité (-${confirmedBooking.pointsUsed} pts)`}
+                  </span>
+                  <span className="text-emerald-400 font-bold">
+                    -{confirmedBooking.discountAmount} {t.common.currency}
+                  </span>
+                </div>
+              </>
+            )}
+            <div className="flex items-center justify-between gap-2 pt-1 border-t border-gray-800/80">
+              <span className="text-gray-300 font-medium">{t.bookingModal.summaryPrice}</span>
+              <span className="text-amber-400 font-black">
+                {confirmedBooking.totalPrice} {t.common.currency}
+              </span>
+            </div>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-gray-400">{t.bookingModal.summaryPoints}</span>
+              <span className="text-gray-400">
+                {isAr ? 'كاشباك متوقع (بعد الحضور)' : 'Cashback attendu (fin de visite)'}
+              </span>
               <span className="text-emerald-400 font-bold">
-                +{confirmedBooking.pointsEarned} pts
+                +{confirmedBooking.expectedCashback} pts
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-gray-400">
+                {isAr ? 'رصيدك الحالي' : 'Solde fidélité actuel'}
+              </span>
+              <span className="text-amber-300 font-semibold">
+                {confirmedBooking.totalPoints} pts
               </span>
             </div>
           </div>

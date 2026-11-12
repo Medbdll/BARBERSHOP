@@ -8,9 +8,11 @@ use App\Http\Resources\UserResource;
 use App\Models\Appointment;
 use App\Models\Barber;
 use App\Models\Service;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -57,6 +59,7 @@ class AppointmentController extends Controller
             'start_time' => ['required', 'date_format:H:i'],
             'appointment_datetime' => ['required', 'date', 'after_or_equal:now'],
             'notes' => ['nullable', 'string', 'max:500'],
+            'use_loyalty_points' => ['nullable', 'boolean'],
             'phone' => [
                 Rule::requiredIf(empty($user->phone)),
                 'nullable',
@@ -83,7 +86,7 @@ class AppointmentController extends Controller
 
         $primaryService = $services->first();
         $totalDuration = (int) $services->sum('duration');
-        $totalPrice = (float) $services->sum('price');
+        $subtotalPrice = round((float) $services->sum('price'), 2);
 
         $barber = Barber::where('id', $request->barber_id)
             ->where('is_active', true)
@@ -92,60 +95,100 @@ class AppointmentController extends Controller
         $startTime = Carbon::parse($request->appointment_date . ' ' . $request->start_time);
         $endTime = $startTime->copy()->addMinutes($totalDuration > 0 ? $totalDuration : 30);
 
-        // Prevent Double-Booking: check for overlapping appointments for this barber
-        $hasConflict = Appointment::where('barber_id', $barber->id)
-            ->whereDate('appointment_date', $request->appointment_date)
-            ->whereNotIn('status', ['cancelled', 'no_show'])
-            ->where(function ($query) use ($startTime, $endTime) {
-                $query->where('start_time', '<', $endTime->format('H:i:s'))
-                    ->where('end_time', '>', $startTime->format('H:i:s'));
-            })
-            ->exists();
+        // Execute collision check, optional loyalty point redemption, phone save & creation atomically
+        $result = DB::transaction(function () use ($request, $user, $barber, $primaryService, $startTime, $endTime, $subtotalPrice) {
+            // Lock user row to prevent concurrent point double-spending
+            $lockedUser = User::where('id', $user->id)->lockForUpdate()->firstOrFail();
 
-        if ($hasConflict) {
-            throw ValidationException::withMessages([
-                'start_time' => [
-                    "Le créneau de {$request->start_time} est déjà réservé pour {$barber->name}. Veuillez sélectionner un autre horaire disponible."
-                ],
-            ]);
-        }
+            // Prevent Double-Booking: check for overlapping appointments for this barber
+            $hasConflict = Appointment::where('barber_id', $barber->id)
+                ->whereDate('appointment_date', $request->appointment_date)
+                ->whereNotIn('status', ['cancelled', 'no_show'])
+                ->where(function ($query) use ($startTime, $endTime) {
+                    $query->where('start_time', '<', $endTime->format('H:i:s'))
+                        ->where('end_time', '>', $startTime->format('H:i:s'));
+                })
+                ->exists();
 
-        // One-Time Persistent Phone Update:
-        // If the user provided a phone number and either didn't have one or explicitly updated it,
-        // permanently persist it to the users table
-        if ($request->filled('phone')) {
-            $cleanedPhone = trim($request->phone);
-            if (!empty($cleanedPhone) && $user->phone !== $cleanedPhone) {
-                $user->update(['phone' => $cleanedPhone]);
+            if ($hasConflict) {
+                throw ValidationException::withMessages([
+                    'start_time' => [
+                        "Le créneau de {$request->start_time} est déjà réservé pour {$barber->name}. Veuillez sélectionner un autre horaire disponible."
+                    ],
+                ]);
             }
-        }
 
-        // Create the appointment
-        $appointment = Appointment::create([
-            'client_id' => $user->id,
-            'barber_id' => $barber->id,
-            'service_id' => $primaryService->id,
-            'appointment_date' => $request->appointment_date,
-            'start_time' => $startTime->format('H:i:s'),
-            'end_time' => $endTime->format('H:i:s'),
-            'status' => 'confirmed',
-            'total_price' => $totalPrice,
-            'notes' => $request->notes,
-        ]);
+            // One-Time Persistent Phone Update
+            if ($request->filled('phone')) {
+                $cleanedPhone = trim($request->phone);
+                if (! empty($cleanedPhone) && $lockedUser->phone !== $cleanedPhone) {
+                    $lockedUser->update(['phone' => $cleanedPhone]);
+                }
+            }
 
-        // Award 15 Loyalty points for booking
-        $user->increment('loyalty_points', 15);
+            // Loyalty Cashback Redemption Rule: 10 points = 1 MAD discount (multiples of 10 up to subtotal)
+            $pointsUsed = 0;
+            $discountAmount = 0.0;
+            $finalTotalPrice = $subtotalPrice;
 
-        $appointment->load(['client', 'barber', 'service']);
+            if ($request->boolean('use_loyalty_points') && (int) $lockedUser->loyalty_points >= 10) {
+                $maxDiscountMad = (int) floor($subtotalPrice);
+                $maxPointsForSubtotal = $maxDiscountMad * 10;
+                $usableBlocks = (int) floor(((int) $lockedUser->loyalty_points) / 10) * 10;
 
-        $freshUser = $user->fresh();
+                $pointsUsed = min($usableBlocks, $maxPointsForSubtotal);
+                $discountAmount = (float) floor($pointsUsed / 10);
+                $finalTotalPrice = max(0.0, round($subtotalPrice - $discountAmount, 2));
+
+                if ($pointsUsed > 0) {
+                    $lockedUser->decrement('loyalty_points', $pointsUsed);
+                }
+            }
+
+            $appointment = Appointment::create([
+                'client_id' => $lockedUser->id,
+                'barber_id' => $barber->id,
+                'service_id' => $primaryService->id,
+                'appointment_date' => $request->appointment_date,
+                'start_time' => $startTime->format('H:i:s'),
+                'end_time' => $endTime->format('H:i:s'),
+                'status' => 'confirmed',
+                'subtotal_price' => $subtotalPrice,
+                'points_used' => $pointsUsed,
+                'discount_amount' => $discountAmount,
+                'total_price' => $finalTotalPrice,
+                'points_earned' => 0,
+                'points_credited' => false,
+                'notes' => $request->notes,
+            ]);
+
+            $appointment->load(['client', 'barber', 'service']);
+            $freshUser = $lockedUser->fresh();
+
+            return [
+                'appointment' => $appointment,
+                'user' => $freshUser,
+                'points_used' => $pointsUsed,
+                'discount_amount' => $discountAmount,
+                'final_total_price' => $finalTotalPrice,
+            ];
+        });
+
+        $appointment = $result['appointment'];
+        $freshUser = $result['user'];
+        $estimatedPointsToEarn = Appointment::calculateEarnedPointsForAmount($result['final_total_price']);
 
         return response()->json([
             'status' => 'success',
             'message' => 'Votre rendez-vous a été confirmé avec succès ! Un SMS de rappel vous parviendra avant votre séance.',
             'data' => new AppointmentResource($appointment),
             'user' => new UserResource($freshUser),
-            'loyalty_points_earned' => 15,
+            'points_used' => $result['points_used'],
+            'discount_amount' => $result['discount_amount'],
+            'subtotal_price' => $subtotalPrice,
+            'total_price' => $result['final_total_price'],
+            'estimated_points_to_earn' => $estimatedPointsToEarn,
+            'loyalty_points_earned' => 0,
             'current_loyalty_points' => $freshUser->loyalty_points,
         ], 201);
     }

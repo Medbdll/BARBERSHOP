@@ -10,6 +10,7 @@ use App\Models\WorkingHour;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class EmployeScheduleController extends Controller
 {
@@ -292,15 +293,20 @@ class EmployeScheduleController extends Controller
             ], 403);
         }
 
-        $oldStatus = $appointment->status;
-        $appointment->update([
-            'status' => $request->status,
-        ]);
+        DB::transaction(function () use ($appointment, $request) {
+            $lockedAppt = Appointment::with('client')->where('id', $appointment->id)->lockForUpdate()->firstOrFail();
+            $oldStatus = $lockedAppt->status;
 
-        // If completed and not previously completed, increment loyalty points (+1)
-        if ($request->status === 'completed' && $oldStatus !== 'completed' && $appointment->client) {
-            $appointment->client->increment('loyalty_points', 1);
-        }
+            $lockedAppt->update([
+                'status' => $request->status,
+            ]);
+
+            if ($request->status === 'completed') {
+                $lockedAppt->creditLoyaltyPoints();
+            } elseif ($request->status === 'cancelled') {
+                $lockedAppt->refundRedeemedPoints($oldStatus);
+            }
+        });
 
         return response()->json([
             'status' => 'success',
