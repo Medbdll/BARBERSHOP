@@ -1,5 +1,10 @@
 import React from 'react';
 import { barbersData as fallbackBarbers } from '../../data/barberShopData';
+import {
+  getImageUrl,
+  handleImageFallbackError,
+  DEFAULT_AVATAR_PLACEHOLDER,
+} from '../../utils/getImageUrl';
 
 export default function BarbersSection({
   lang,
@@ -43,7 +48,7 @@ export default function BarbersSection({
               const defaultTitle = t.barbers.defaultTitle || (lang === 'ar' ? 'حلاق محترف' : 'Maître Barbier');
               const title = lang === 'ar' ? (barber.titleAr || barber.experience || defaultTitle) : (barber.titleFr || barber.experience || defaultTitle);
               const specialty = lang === 'ar' ? (barber.specialtyAr || barber.specialty) : (barber.specialtyFr || barber.specialty);
-              const imageUrl = barber.image_url || barber.image;
+              const imageUrl = getImageUrl(barber.image_url || barber.image, DEFAULT_AVATAR_PLACEHOLDER);
 
               return (
                 <div
@@ -58,6 +63,7 @@ export default function BarbersSection({
                         alt={barber.name}
                         loading="lazy"
                         decoding="async"
+                        onError={(e) => handleImageFallbackError(e, DEFAULT_AVATAR_PLACEHOLDER)}
                         className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-transparent to-transparent opacity-60"></div>

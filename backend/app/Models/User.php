@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\MediaUrl;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -71,6 +72,25 @@ class User extends Authenticatable
     protected $appends = [
         'profile_photo_url',
     ];
+
+    public function getAvatarAttribute(?string $value): ?string
+    {
+        return MediaUrl::toPublicUrl($value);
+    }
+
+    public function getProfilePhotoUrlAttribute(): string
+    {
+        $avatarRaw = $this->getRawOriginal('avatar') ?? ($this->getAttributes()['avatar'] ?? null);
+        if (is_string($avatarRaw) && trim($avatarRaw) !== '') {
+            return MediaUrl::toPublicUrl($avatarRaw);
+        }
+
+        if (is_string($this->profile_photo_path) && trim($this->profile_photo_path) !== '') {
+            return MediaUrl::toPublicUrl($this->profile_photo_path);
+        }
+
+        return $this->defaultProfilePhotoUrl();
+    }
 
     public function appointments(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
@@ -194,7 +214,7 @@ class User extends Authenticatable
                     'experience' => '5 ans',
                     'rating' => 5.0,
                     'bio' => 'Professionnel dédié aux rituels de soins masculins et coiffures modernes.',
-                    'image_url' => $this->avatar ?: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400',
+                    'image_url' => MediaUrl::toStoragePath($this->getRawOriginal('avatar')) ?: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400',
                     'is_active' => true,
                 ]);
 

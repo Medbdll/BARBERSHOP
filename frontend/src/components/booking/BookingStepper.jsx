@@ -10,6 +10,11 @@ import {
   getClientAppointmentQueueStatus,
 } from '../../api/barberApi';
 import { getTodayDateString, isSlotInPast } from '../../utils/dateTime';
+import {
+  getImageUrl,
+  handleImageFallbackError,
+  DEFAULT_AVATAR_PLACEHOLDER,
+} from '../../utils/getImageUrl';
 
 const PENDING_BOOKING_KEY = 'pending_booking';
 
@@ -991,11 +996,12 @@ export default function BookingStepper({
                           <div className="w-full">
                             <div className="flex items-start gap-3">
                               <img
-                                src={
-                                  barber.image_url ||
-                                  'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=300&q=80'
-                                }
+                                src={getImageUrl(
+                                  barber.image_url || barber.photo,
+                                  DEFAULT_AVATAR_PLACEHOLDER
+                                )}
                                 alt={barber.name}
+                                onError={(e) => handleImageFallbackError(e, DEFAULT_AVATAR_PLACEHOLDER)}
                                 className="w-12 h-12 rounded-xl object-cover border border-amber-500/20 shrink-0"
                               />
                               <div className="flex-1 min-w-0">
@@ -1453,11 +1459,12 @@ export default function BookingStepper({
                         </span>
                         <div className="flex items-center gap-2 text-white font-semibold">
                           <img
-                            src={
-                              selectedBarber?.image_url ||
-                              'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=150&q=80'
-                            }
+                            src={getImageUrl(
+                              selectedBarber?.photo || selectedBarber?.image_url,
+                              DEFAULT_AVATAR_PLACEHOLDER
+                            )}
                             alt={selectedBarber?.name}
+                            onError={(e) => handleImageFallbackError(e, DEFAULT_AVATAR_PLACEHOLDER)}
                             className="w-6 h-6 rounded-full object-cover shrink-0"
                           />
                           <span>{selectedBarber?.name}</span>
@@ -1594,11 +1601,12 @@ export default function BookingStepper({
                   {selectedBarber ? (
                     <div className="flex items-center gap-2.5 pt-1">
                       <img
-                        src={
-                          selectedBarber.image_url ||
-                          'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=150&q=80'
-                        }
+                        src={getImageUrl(
+                          selectedBarber.image_url || selectedBarber.photo,
+                          DEFAULT_AVATAR_PLACEHOLDER
+                        )}
                         alt={selectedBarber.name}
+                        onError={(e) => handleImageFallbackError(e, DEFAULT_AVATAR_PLACEHOLDER)}
                         className="w-8 h-8 rounded-full object-cover border border-amber-500/30 shrink-0"
                       />
                       <div className="min-w-0">

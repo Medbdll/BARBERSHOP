@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\MediaUrl;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -28,6 +29,16 @@ class Barber extends Model
         'rating' => 'float',
         'is_active' => 'boolean',
     ];
+
+    public function getImageUrlAttribute(?string $value): ?string
+    {
+        return MediaUrl::toPublicUrl($value);
+    }
+
+    public function getPhotoAttribute(?string $value = null): ?string
+    {
+        return $value !== null ? MediaUrl::toPublicUrl($value) : $this->image_url;
+    }
 
     public function user(): BelongsTo
     {

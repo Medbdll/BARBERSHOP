@@ -4,6 +4,12 @@ import { useAuth } from '../../context/useAuth';
 import BrandLogo from '../common/BrandLogo';
 import { getTodayDateString, isSlotInPast, getRelativeScheduleStatus } from '../../utils/dateTime';
 import {
+  getImageUrl,
+  handleImageFallbackError,
+  DEFAULT_AVATAR_PLACEHOLDER,
+  DEFAULT_GALLERY_PLACEHOLDER,
+} from '../../utils/getImageUrl';
+import {
   getAdminStats,
   getAdminAppointments,
   updateAdminAppointmentStatus,
@@ -770,10 +776,19 @@ export default function AdminPortal() {
         <div className="p-3 border-t border-gray-800/90">
           <div className={`flex items-center gap-3 p-2 rounded-xl bg-gray-900/80 border border-gray-800 ${sidebarCollapsed ? 'justify-center p-1.5' : ''}`}>
             <img
-              src={user?.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'Admin')}&color=D97706&background=111827`}
+              src={getImageUrl(
+                user?.profile_photo_url,
+                `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'Admin')}&color=D97706&background=111827`
+              )}
               alt={user?.name}
               loading="lazy"
               decoding="async"
+              onError={(e) =>
+                handleImageFallbackError(
+                  e,
+                  `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'Admin')}&color=D97706&background=111827`
+                )
+              }
               className="w-9 h-9 rounded-xl border border-amber-500/40 object-cover flex-shrink-0"
             />
             {!sidebarCollapsed && (
@@ -1589,10 +1604,11 @@ export default function AdminPortal() {
                   <div key={b.id} className="rounded-2xl border border-gray-800 bg-[#161F30] overflow-hidden flex flex-col justify-between">
                     <div>
                       <img
-                        src={b.image_url || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400'}
+                        src={getImageUrl(b.image_url, DEFAULT_AVATAR_PLACEHOLDER)}
                         alt={b.name}
                         loading="lazy"
                         decoding="async"
+                        onError={(e) => handleImageFallbackError(e, DEFAULT_AVATAR_PLACEHOLDER)}
                         className="w-full h-44 object-cover object-top"
                       />
                       <div className="p-5">
@@ -1756,10 +1772,11 @@ export default function AdminPortal() {
                   {gallery.map((g) => (
                     <div key={g.id} className="rounded-xl overflow-hidden border border-gray-800 relative group">
                       <img
-                        src={g.image_url}
+                        src={getImageUrl(g.image_url, DEFAULT_GALLERY_PLACEHOLDER)}
                         alt={g.title}
                         loading="lazy"
                         decoding="async"
+                        onError={(e) => handleImageFallbackError(e, DEFAULT_GALLERY_PLACEHOLDER)}
                         className="w-full h-40 object-cover"
                       />
                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold">
