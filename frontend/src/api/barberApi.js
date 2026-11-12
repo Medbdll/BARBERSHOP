@@ -216,34 +216,52 @@ export const getClientLoyalty = async () => {
  */
 
 export const getEmployeeAppointments = async (params = {}) => {
-  const response = await api.get('/employee/appointments', { params });
+  const response = await api.get('/employe/appointments', { params });
   return response.data;
 };
 
 export const updateEmployeeAppointmentStatus = async (id, status) => {
-  const response = await api.patch(`/employee/appointments/${id}/status`, { status });
+  const response = await api.patch(`/employe/appointments/${id}/status`, { status });
   return response.data;
 };
 
-export const getEmployeSchedule = async (date, view = 'day') => {
-  const response = await api.get('/employee/schedule', {
-    params: { date, view },
-  });
+export const getEmployeSchedule = async (paramsOrDate, view = 'day') => {
+  const params =
+    paramsOrDate && typeof paramsOrDate === 'object'
+      ? paramsOrDate
+      : { date: paramsOrDate, view };
+  const response = await api.get('/employe/schedule', { params });
   return response.data;
 };
 
 export const updateAppointmentStatus = async (id, status, notes = '') => {
-  const response = await api.patch(`/employee/appointments/${id}/status`, {
+  const response = await api.patch(`/employe/appointments/${id}/status`, {
     status,
     notes,
   });
   return response.data;
 };
 
-export const updateWorkingHours = async (workingHours) => {
-  const response = await api.put('/employee/working-hours', {
+export const updateWorkingHours = async (workingHours, isActive = undefined) => {
+  const payload = {
     working_hours: workingHours,
+  };
+  if (typeof isActive === 'boolean') {
+    payload.is_active = isActive;
+  }
+  const response = await api.put('/employe/working-hours', payload);
+  return response.data;
+};
+
+export const updateEmployeeAvailability = async (isActive) => {
+  const response = await api.patch('/employe/availability', {
+    is_active: Boolean(isActive),
   });
+  return response.data;
+};
+
+export const updateEmployeeProfile = async (profileData) => {
+  const response = await api.put('/employe/profile', profileData);
   return response.data;
 };
 
