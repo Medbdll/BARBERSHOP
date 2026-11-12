@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Controllers\Api\AdminApiController;
+use App\Http\Controllers\Api\AdminRoleController;
 use App\Http\Controllers\Api\AppointmentController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BarberController;
 use App\Http\Controllers\Api\ClientAppointmentController;
 use App\Http\Controllers\Api\EmployeScheduleController;
 use App\Http\Controllers\Api\GoogleAuthController;
@@ -95,12 +97,14 @@ Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(functi
 
     // Appointments Management
     Route::get('/appointments', [AdminApiController::class, 'appointmentsIndex']);
+    Route::post('/appointments', [AdminApiController::class, 'appointmentsStore']);
     Route::patch('/appointments/{id}/status', [AdminApiController::class, 'appointmentsUpdateStatus']);
     Route::put('/appointments/{id}', [AdminApiController::class, 'appointmentsUpdate']);
 
     // Users & Roles Management
     Route::get('/users', [AdminApiController::class, 'usersIndex']);
     Route::post('/users', [AdminApiController::class, 'usersStore']);
+    Route::patch('/users/{id}/toggle-status', [AdminApiController::class, 'toggleUserStatus']);
     Route::delete('/users/{id}', [AdminApiController::class, 'usersDestroy']);
     Route::post('/users/{id}/sync-roles', [AdminApiController::class, 'syncRoles']);
 
@@ -118,12 +122,17 @@ Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(functi
     Route::get('/barbers', [AdminApiController::class, 'barbersIndex']);
     Route::post('/barbers', [AdminApiController::class, 'barbersStore']);
     Route::put('/barbers/{id}', [AdminApiController::class, 'barbersUpdate']);
-    Route::delete('/barbers/{id}', [AdminApiController::class, 'barbersDestroy']);
+    Route::delete('/barbers/{id}', [BarberController::class, 'destroy']);
 
     // Gallery Management
     Route::post('/gallery', [AdminApiController::class, 'galleryStore']);
     Route::put('/gallery/{id}', [AdminApiController::class, 'galleryUpdate']);
     Route::delete('/gallery/{id}', [AdminApiController::class, 'galleryDestroy']);
+
+    // Single-Role selection & User management
+    Route::put('/users/{id}/role', [AdminRoleController::class, 'updateUserRole']);
+    Route::patch('/users/{id}/role', [AdminRoleController::class, 'updateUserRole']);
+    Route::post('/users/{id}/role', [AdminRoleController::class, 'updateUserRole']);
 
     // Reviews Moderation
     Route::patch('/reviews/{id}/approve', [AdminApiController::class, 'approveReview']);

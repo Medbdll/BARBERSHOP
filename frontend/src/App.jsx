@@ -11,7 +11,7 @@ const LandingPage = React.lazy(() => import('./components/landing/LandingPage'))
 const LuxurySplitAuth = React.lazy(() => import('./components/auth/LuxurySplitAuth'));
 const ClientDashboard = React.lazy(() => import('./components/client/ClientDashboard'));
 const EmployeDashboard = React.lazy(() => import('./components/employe/EmployeDashboard'));
-const AdminPortal = React.lazy(() => import('./components/admin/AdminPortal'));
+const AdminDashboard = React.lazy(() => import('./components/admin/AdminDashboard'));
 const GoogleCallback = React.lazy(() => import('./components/auth/GoogleCallback'));
 
 function LuxuryPageFallback() {
@@ -157,7 +157,7 @@ export default function App() {
                 path="/admin/*"
                 element={
                   <ProtectedRoute allowedRoles={['admin']}>
-                    <AdminPortal />
+                    <AdminDashboard />
                   </ProtectedRoute>
                 }
               />

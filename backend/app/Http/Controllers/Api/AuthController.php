@@ -68,6 +68,12 @@ class AuthController extends Controller
             ]);
         }
 
+        if (($user->status ?? 'active') === 'blocked') {
+            throw ValidationException::withMessages([
+                'email' => ['Votre compte a été bloqué par un administrateur.'],
+            ]);
+        }
+
         $token = $user->createToken('auth-token')->plainTextToken;
 
         return response()->json([

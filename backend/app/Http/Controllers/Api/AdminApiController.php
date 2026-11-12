@@ -23,6 +23,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -97,25 +99,29 @@ class AdminApiController extends Controller
         $serviceCounts = $topServices->map(fn($s) => $s->appointments_count > 0 ? $s->appointments_count : rand(15, 60))->toArray();
 
         $todayCount = Appointment::whereDate('appointment_date', $now->toDateString())->count();
-        $rdvToday = $todayCount > 0 ? $todayCount : 18;
+        $rdvToday = $todayCount;
 
         $monthClientsCount = User::role('client')
             ->where('created_at', '>=', $startOfMonth)
             ->count();
-        $newClientsMonth = $monthClientsCount > 0 ? $monthClientsCount : 34;
+        $newClientsMonth = $monthClientsCount;
 
         $noShowCount = Appointment::where('status', 'no_show')->count();
         $noShowRate = $totalAppointments > 0
             ? round(($noShowCount / $totalAppointments) * 100, 1)
-            : 4.8;
+            : 0.0;
+        $attendanceRate = $totalAppointments > 0
+            ? round((($totalAppointments - $noShowCount) / $totalAppointments) * 100, 1)
+            : 100.0;
 
         // Enhanced Doughnut dataset with percentages and colors
-        $colors = ['#D97706', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899'];
-        $totalServiceCount = array_sum($serviceCounts);
+        $colors = ['#D9822B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899'];
+        $realServiceCounts = $topServices->map(fn ($s) => (int) $s->appointments_count)->toArray();
+        $totalServiceCount = array_sum($realServiceCounts);
         $doughnutServices = [];
         foreach ($serviceLabels as $idx => $label) {
-            $cnt = $serviceCounts[$idx] ?? 20;
-            $pct = $totalServiceCount > 0 ? round(($cnt / $totalServiceCount) * 100, 1) : 20;
+            $cnt = $realServiceCounts[$idx] ?? 0;
+            $pct = $totalServiceCount > 0 ? round(($cnt / $totalServiceCount) * 100, 1) : 0;
             $doughnutServices[] = [
                 'name' => $label,
                 'count' => $cnt,
@@ -129,17 +135,18 @@ class AdminApiController extends Controller
             'kpis' => [
                 'rdv_today' => $rdvToday,
                 'rdv_today_trend' => '+12% vs hier',
-                'month_revenue' => $monthRevenue > 0 ? $monthRevenue : 24850.00,
+                'month_revenue' => round($monthRevenue, 2),
                 'month_revenue_trend' => '+18.4% ce mois',
-                'total_revenue' => $totalRevenue > 0 ? $totalRevenue : 87450.00,
+                'total_revenue' => round($totalRevenue, 2),
                 'currency' => 'MAD',
                 'new_clients_month' => $newClientsMonth,
                 'new_clients_trend' => '+8 cette semaine',
                 'no_show_rate' => $noShowRate,
+                'attendance_rate' => $attendanceRate,
                 'no_show_trend' => '-1.5% optimisé',
-                'total_appointments' => $totalAppointments > 0 ? $totalAppointments : 432,
-                'completed_appointments' => $completedAppointments > 0 ? $completedAppointments : 389,
-                'total_clients' => $totalClients > 0 ? $totalClients : 280,
+                'total_appointments' => $totalAppointments,
+                'completed_appointments' => $completedAppointments,
+                'total_clients' => $totalClients,
                 'total_barbers' => $totalBarbers,
             ],
             'charts' => [
@@ -196,7 +203,7 @@ class AdminApiController extends Controller
         $currentTimeStr = $now->format('H:i:s');
 
         $query = Appointment::with([
-            'client:id,name,phone,email,loyalty_points',
+            'client:id,name,phone,email,loyalty_points,avatar',
             'barber:id,name,specialty,image_url',
             'service:id,name,duration,price',
         ]);
@@ -290,6 +297,105 @@ class AdminApiController extends Controller
         ]);
     }
 
+    /**
+     * POST /api/admin/appointments
+     * Create a manual or walk-in booking for an existing client or walk-in guest.
+     */
+    public function appointmentsStore(Request $request): JsonResponse
+    {
+        $serviceIds = [];
+        if ($request->has('service_ids') && is_array($request->service_ids)) {
+            $serviceIds = array_filter($request->service_ids);
+        } elseif ($request->filled('service_id')) {
+            $serviceIds = [(int) $request->service_id];
+        }
+        $request->merge(['normalized_service_ids' => $serviceIds]);
+
+        $validated = $request->validate([
+            'client_id' => ['nullable', 'exists:users,id'],
+            'client_name' => ['required_without:client_id', 'nullable', 'string', 'max:255'],
+            'client_phone' => ['nullable', 'string', 'max:25'],
+            'barber_id' => ['required', 'exists:barbers,id'],
+            'normalized_service_ids' => ['required', 'array', 'min:1'],
+            'normalized_service_ids.*' => ['integer', 'exists:services,id'],
+            'appointment_date' => ['required', 'date_format:Y-m-d'],
+            'start_time' => ['required', 'date_format:H:i'],
+            'status' => ['nullable', 'in:pending,confirmed,in_progress,completed'],
+            'notes' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $services = Service::whereIn('id', $serviceIds)->get();
+        $primaryService = $services->firstOrFail();
+        $totalDuration = (int) $services->sum('duration');
+        $subtotalPrice = round((float) $services->sum('price'), 2);
+        $barber = Barber::findOrFail($validated['barber_id']);
+
+        $startTime = Carbon::parse($validated['appointment_date'] . ' ' . $validated['start_time']);
+        $endTime = $startTime->copy()->addMinutes($totalDuration > 0 ? $totalDuration : 30);
+
+        $hasConflict = Appointment::where('barber_id', $barber->id)
+            ->whereDate('appointment_date', $validated['appointment_date'])
+            ->whereNotIn('status', ['cancelled', 'no_show'])
+            ->where(function ($q) use ($startTime, $endTime) {
+                $q->where('start_time', '<', $endTime->format('H:i:s'))
+                    ->where('end_time', '>', $startTime->format('H:i:s'));
+            })
+            ->exists();
+
+        if ($hasConflict) {
+            throw ValidationException::withMessages([
+                'start_time' => ["Le créneau de {$validated['start_time']} est déjà réservé pour {$barber->name}."],
+            ]);
+        }
+
+        $appointment = DB::transaction(function () use ($validated, $barber, $primaryService, $startTime, $endTime, $subtotalPrice) {
+            $clientUser = null;
+            if (! empty($validated['client_id'])) {
+                $clientUser = User::findOrFail($validated['client_id']);
+            } else {
+                $cleanPhone = trim((string) ($validated['client_phone'] ?? ''));
+                if ($cleanPhone !== '') {
+                    $clientUser = User::where('phone', $cleanPhone)->first();
+                }
+
+                if (! $clientUser) {
+                    $clientUser = User::create([
+                        'name' => trim((string) $validated['client_name']),
+                        'email' => 'walkin_' . Str::lower(Str::random(10)) . '@barberoza.local',
+                        'phone' => $cleanPhone !== '' ? $cleanPhone : null,
+                        'loyalty_points' => 0,
+                        'status' => 'active',
+                        'password' => Hash::make(Str::random(24)),
+                    ]);
+                    $clientUser->assignRole('client');
+                }
+            }
+
+            return Appointment::create([
+                'client_id' => $clientUser->id,
+                'barber_id' => $barber->id,
+                'service_id' => $primaryService->id,
+                'appointment_date' => $validated['appointment_date'],
+                'start_time' => $startTime->format('H:i:s'),
+                'end_time' => $endTime->format('H:i:s'),
+                'status' => $validated['status'] ?? 'confirmed',
+                'subtotal_price' => $subtotalPrice,
+                'points_used' => 0,
+                'discount_amount' => 0,
+                'total_price' => $subtotalPrice,
+                'points_earned' => 0,
+                'points_credited' => false,
+                'notes' => $validated['notes'] ?? null,
+            ]);
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Rendez-vous manuel enregistré avec succès.',
+            'data' => new AppointmentResource($appointment->load(['client', 'barber', 'service'])),
+        ], 201);
+    }
+
     public function appointmentsUpdateStatus(Request $request, int $id): JsonResponse
     {
         $request->validate([
@@ -361,10 +467,26 @@ class AdminApiController extends Controller
 
     public function usersIndex(Request $request): JsonResponse
     {
-        $users = User::with(['roles', 'permissions'])
-            ->select(['id', 'name', 'email', 'phone', 'loyalty_points', 'avatar', 'profile_photo_path', 'created_at'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(15);
+        $query = User::with(['roles', 'permissions'])
+            ->select(['id', 'name', 'email', 'phone', 'loyalty_points', 'avatar', 'profile_photo_path', 'status', 'created_at'])
+            ->withCount('appointments');
+
+        if ($request->filled('search')) {
+            $s = '%' . $request->search . '%';
+            $query->where(function ($q) use ($s) {
+                $q->where('name', 'like', $s)
+                    ->orWhere('email', 'like', $s)
+                    ->orWhere('phone', 'like', $s);
+            });
+        }
+
+        if ($request->filled('role') && $request->role !== 'all') {
+            $query->role($request->role);
+        }
+
+        $perPage = min(max((int) $request->input('per_page', 50), 1), 200);
+
+        $users = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
         return response()->json([
             'status' => 'success',
@@ -374,6 +496,44 @@ class AdminApiController extends Controller
                 'current_page' => $users->currentPage(),
                 'last_page' => $users->lastPage(),
             ],
+        ]);
+    }
+
+    /**
+     * PATCH /api/admin/users/{id}/toggle-status
+     * Block or unblock an account (e.g. repeat no-show clients).
+     */
+    public function toggleUserStatus(Request $request, int $id): JsonResponse
+    {
+        $user = User::with(['roles', 'permissions'])->findOrFail($id);
+
+        if ($request->user() && $request->user()->id === $user->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Vous ne pouvez pas bloquer votre propre compte administrateur.',
+            ], 422);
+        }
+
+        if ($user->hasRole('admin') && ($user->status ?? 'active') === 'active' && User::role('admin')->where('status', 'active')->count() <= 1) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Impossible de bloquer le dernier administrateur actif.',
+            ], 422);
+        }
+
+        $nextStatus = ($user->status ?? 'active') === 'blocked' ? 'active' : 'blocked';
+        $user->update(['status' => $nextStatus]);
+
+        if ($nextStatus === 'blocked') {
+            $user->tokens()->delete();
+        }
+
+        $freshUser = $user->fresh()->load(['roles', 'permissions'])->loadCount('appointments');
+
+        return response()->json([
+            'status' => 'success',
+            'message' => $nextStatus === 'blocked' ? 'Compte bloqué.' : 'Compte réactivé.',
+            'data' => new UserResource($freshUser),
         ]);
     }
 
@@ -406,19 +566,14 @@ class AdminApiController extends Controller
     public function syncRoles(Request $request, int $id): JsonResponse
     {
         $request->validate([
-            'roles' => ['required', 'array'],
+            'roles' => ['required', 'array', 'size:1'],
             'roles.*' => ['string', 'in:admin,employe,client'],
         ]);
 
-        $user = User::findOrFail($id);
-        $user->syncRoles($request->roles);
+        $singleRole = $request->roles[0];
+        $request->merge(['role' => $singleRole]);
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Rôles synchronisés avec succès.',
-            'data' => new UserResource($user),
-            'roles' => $user->getRoleNames(),
-        ]);
+        return app(AdminRoleController::class)->updateUserRole($request, $id);
     }
 
     public function usersDestroy(int $id): JsonResponse
@@ -672,14 +827,7 @@ class AdminApiController extends Controller
 
     public function barbersDestroy(int $id): JsonResponse
     {
-        $barber = Barber::findOrFail($id);
-        $barber->delete();
-        Cache::forget('public_barbers_list');
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Barbier supprimé de l’équipe.',
-        ]);
+        return app(BarberController::class)->destroy($id);
     }
 
     // ==========================================
