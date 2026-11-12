@@ -14,7 +14,6 @@ import {
   cancelClientAppointment,
   rescheduleClientAppointment,
   submitClientReview,
-  getClientLoyalty,
   updateUserProfile,
 } from '../../api/barberApi';
 import { getTodayDateString, isSlotInPast } from '../../utils/dateTime';
@@ -36,15 +35,12 @@ const DASHBOARD_COPY = {
     welcome: 'Bonjour',
     welcomeSubtitle: 'Gérez vos réservations en direct, suivez votre tour et cumulez vos récompenses.',
     loyalty: {
-      badge: 'Carte Fidélité VIP',
+      badge: 'Portefeuille Fidélité VIP',
       progressText: '{done}/9 coupes réalisées — la 10ème offerte !',
       freeReady: 'Félicitations ! Votre prochaine coupe est offerte !',
       pointsLabel: 'Solde actuel',
+      walletSummary: 'Solde : {points} pts = {amount} MAD de réduction',
       discountNote: '≈ {amount} MAD de remise',
-      tierLabel: 'Statut actuel',
-      rewardsTitle: 'Avantages & Récompenses',
-      unlocked: 'Débloqué',
-      locked: '{pts} pts requis',
       favoritesTitle: 'Vos Barbiers Favoris',
       favoritesEmpty: 'Vos barbiers préférés apparaîtront ici dès votre première visite.',
       visitsCount: '{count} visite(s)',
@@ -121,6 +117,7 @@ const DASHBOARD_COPY = {
     },
     feedback: {
       cancelled: 'Rendez-vous annulé avec succès.',
+      cancelledRefunded: 'Rendez-vous annulé et {pts} pts fidélité remboursés !',
       rescheduled: 'Votre rendez-vous a été reporté.',
       rated: 'Merci pour votre avis ! +20 pts crédités.',
       errorGeneric: 'Une erreur est survenue. Veuillez réessayer.',
@@ -140,15 +137,12 @@ const DASHBOARD_COPY = {
     welcome: 'مرحباً بك،',
     welcomeSubtitle: 'تابع مواعيدك مباشرة، اعرف دورك في قائمة الانتظار، واجمع نقاط المكافآت.',
     loyalty: {
-      badge: 'بطاقة الوفاء VIP',
+      badge: 'محفظة الوفاء VIP',
       progressText: '{done}/9 قصات منجزة — القصة العاشرة مجانية!',
       freeReady: 'مبروك! قصتك القادمة مجانية بالكامل!',
       pointsLabel: 'الرصيد الحالي',
+      walletSummary: 'الرصيد : {points} نقطة = {amount} درهم خصم',
       discountNote: '≈ {amount} درهم خصم',
-      tierLabel: 'المستوى الحالي',
-      rewardsTitle: 'المزايا والمكافآت',
-      unlocked: 'متاح للاستخدام',
-      locked: 'يتطلب {pts} نقطة',
       favoritesTitle: 'حلاقوك المفضلون',
       favoritesEmpty: 'سيظهر حلاقوك المفضلون هنا بعد أول زيارة لك.',
       visitsCount: '{count} زيارة',
@@ -225,6 +219,7 @@ const DASHBOARD_COPY = {
     },
     feedback: {
       cancelled: 'تم إلغاء الموعد بنجاح.',
+      cancelledRefunded: 'تم إلغاء الموعد واسترجاع {pts} نقطة إلى رصيدك!',
       rescheduled: 'تم تعديل موعدك بنجاح.',
       rated: 'شكراً لتقييمك! تم إضافة +20 نقطة ولاء.',
       errorGeneric: 'حدث خطأ ما. يرجى المحاولة مرة أخرى.',
@@ -262,7 +257,6 @@ export default function ClientDashboard() {
   const [loadingAppointments, setLoadingAppointments] = useState(false);
   const [services, setServices] = useState([]);
   const [barbers, setBarbers] = useState([]);
-  const [loyaltyData, setLoyaltyData] = useState(null);
 
   // Live Queue Drop Detection
   const prevQueueRef = useRef({});
@@ -370,11 +364,10 @@ export default function ClientDashboard() {
   // Initial Data Load
   useEffect(() => {
     loadAppointments(false);
-    Promise.all([getServices(), getBarbers(), getClientLoyalty()])
-      .then(([srvRes, brbRes, loyRes]) => {
+    Promise.all([getServices(), getBarbers()])
+      .then(([srvRes, brbRes]) => {
         setServices(srvRes?.data || []);
         setBarbers(brbRes?.data || []);
-        setLoyaltyData(loyRes?.data || null);
       })
       .catch((err) => console.warn('Initial catalog load warning:', err?.message || err));
   }, [loadAppointments]);
@@ -549,9 +542,22 @@ export default function ClientDashboard() {
     const apptId = cancelModal.appointment.id;
     setCancelModal((prev) => ({ ...prev, submitting: true }));
     try {
-      await cancelClientAppointment(apptId);
+      const res = await cancelClientAppointment(apptId);
       setCancelModal({ isOpen: false, appointment: null, submitting: false });
-      showToast(copy.feedback.cancelled, 'success');
+
+      if (res?.user && updateUser) {
+        updateUser(res.user);
+      } else if (res?.current_loyalty_points !== undefined && updateUser) {
+        updateUser({ loyalty_points: res.current_loyalty_points });
+      }
+
+      const refundedPts = Number(res?.points_refunded ?? 0);
+      if (refundedPts > 0) {
+        showToast(copy.feedback.cancelledRefunded.replace('{pts}', String(refundedPts)), 'success');
+      } else {
+        showToast(copy.feedback.cancelled, 'success');
+      }
+
       loadAppointments(true);
     } catch (err) {
       setCancelModal((prev) => ({ ...prev, submitting: false }));
@@ -880,62 +886,56 @@ export default function ClientDashboard() {
             </button>
           </section>
 
-          {/* Loyalty Progress Card */}
-          <section className="p-5 sm:p-6 rounded-2xl bg-[#182030] border border-[#D9822B]/30 shadow-xl space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="space-y-1">
+          {/* Luxury Loyalty Wallet & Cashback Card */}
+          <section className="p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-[#182030] via-[#182030] to-[#121826] border border-[#D9822B]/35 shadow-xl space-y-4">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div className="space-y-1.5">
                 <div className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-[#D9822B]">
-                  <span>⭐</span>
+                  <span>💳</span>
                   <span>{copy.loyalty.badge}</span>
                 </div>
-                <div className="text-sm sm:text-base font-bold text-white">
-                  {cutsProgress === 9
-                    ? copy.loyalty.freeReady
-                    : copy.loyalty.progressText.replace('{done}', String(cutsProgress))}
+                <div className="text-base sm:text-lg font-black text-white">
+                  {copy.loyalty.walletSummary
+                    .replace('{points}', String(user?.loyalty_points ?? 0))
+                    .replace('{amount}', String(Math.floor((user?.loyalty_points ?? 0) / 10)))}
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-[#10151F] border border-slate-800">
+              <div className="flex items-center gap-4 px-4 py-3 rounded-xl bg-[#10151F] border border-[#D9822B]/30 shrink-0">
                 <div>
                   <div className="text-[10px] uppercase tracking-wider text-slate-400">
                     {copy.loyalty.pointsLabel}
                   </div>
-                  <div className="text-lg font-black text-[#D9822B] font-mono leading-tight">
-                    {user?.loyalty_points ?? 0} {copy.loyalty.ptsUnit}
+                  <div className="text-2xl font-black text-[#D9822B] font-mono leading-tight">
+                    {user?.loyalty_points ?? 0}{' '}
+                    <span className="text-xs font-bold">{copy.loyalty.ptsUnit}</span>
                   </div>
                 </div>
-                <div className="h-7 w-px bg-slate-800" />
-                <div className="text-xs text-emerald-400 font-semibold">
-                  {copy.loyalty.discountNote.replace(
-                    '{amount}',
-                    String(Math.floor((user?.loyalty_points ?? 0) / 10))
-                  )}
+                <div className="h-9 w-px bg-slate-800" />
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-slate-400">Cashback</div>
+                  <div className="text-lg font-black text-emerald-400 font-mono leading-tight">
+                    {Math.floor((user?.loyalty_points ?? 0) / 10)} {copy.loyalty.currency}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Visual Progress Bar */}
-            <div className="space-y-2">
-              <div className="w-full h-3 rounded-full bg-[#10151F] border border-slate-800 overflow-hidden">
+            {/* Visual Cut Milestone Bar */}
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center justify-between text-xs text-slate-300 font-semibold">
+                <span>
+                  {cutsProgress === 9
+                    ? copy.loyalty.freeReady
+                    : copy.loyalty.progressText.replace('{done}', String(cutsProgress))}
+                </span>
+                <span className="text-[#D9822B] font-mono">{cutsProgress}/9</span>
+              </div>
+              <div className="w-full h-2.5 rounded-full bg-[#10151F] border border-slate-800 overflow-hidden">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-[#D9822B] via-amber-400 to-amber-300 transition-all duration-700"
                   style={{ width: `${progressPercent}%` }}
                 />
-              </div>
-
-              {/* 9 Stamp Dots + 10th Free */}
-              <div className="flex items-center justify-between gap-1 pt-1">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((idx) => (
-                  <div
-                    key={idx}
-                    className={`flex-1 h-1.5 rounded-full transition-colors ${
-                      idx <= cutsProgress ? 'bg-[#D9822B]' : 'bg-slate-800'
-                    }`}
-                  />
-                ))}
-                <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold shrink-0">
-                  10🎁
-                </span>
               </div>
             </div>
           </section>
@@ -1187,47 +1187,6 @@ export default function ClientDashboard() {
           {/* ============================================================ */}
           {activeTab === 'loyalty' && (
             <section className="space-y-6">
-              {/* Rewards Matrix */}
-              <div className="p-5 sm:p-6 rounded-2xl bg-[#182030] border border-slate-800 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h2 className="text-lg font-bold text-white">{copy.loyalty.rewardsTitle}</h2>
-                  {loyaltyData?.tier && (
-                    <span className="px-3 py-1 rounded-full bg-[#D9822B]/20 border border-[#D9822B]/40 text-[#D9822B] text-xs font-bold">
-                      {copy.loyalty.tierLabel} : {loyaltyData.tier}
-                    </span>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {(loyaltyData?.rewards_available || []).map((reward) => (
-                    <div
-                      key={reward.id}
-                      className={`p-4 rounded-xl border ${
-                        reward.unlocked
-                          ? 'bg-emerald-500/10 border-emerald-500/40'
-                          : 'bg-[#10151F] border-slate-800'
-                      }`}
-                    >
-                      <div className="text-sm font-bold text-white">{reward.title}</div>
-                      <div className="mt-2 flex items-center justify-between text-xs">
-                        <span className="font-mono text-[#D9822B] font-bold">
-                          {reward.points_cost} {copy.loyalty.ptsUnit}
-                        </span>
-                        <span
-                          className={`font-semibold ${
-                            reward.unlocked ? 'text-emerald-400' : 'text-slate-400'
-                          }`}
-                        >
-                          {reward.unlocked
-                            ? copy.loyalty.unlocked
-                            : copy.loyalty.locked.replace('{pts}', String(reward.points_cost))}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
               {/* Favorite Barbers */}
               <div className="p-5 sm:p-6 rounded-2xl bg-[#182030] border border-slate-800 space-y-4">
                 <h2 className="text-lg font-bold text-white">{copy.loyalty.favoritesTitle}</h2>

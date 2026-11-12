@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AppointmentResource;
 use App\Http\Resources\ReviewResource;
+use App\Http\Resources\UserResource;
 use App\Models\Appointment;
 use App\Models\Barber;
 use App\Models\Review;
@@ -12,6 +13,7 @@ use App\Models\Service;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class ClientAppointmentController extends Controller
@@ -174,14 +176,26 @@ class ClientAppointmentController extends Controller
             ], 422);
         }
 
-        $appointment->update([
-            'status' => 'cancelled',
-        ]);
+        $refunded = DB::transaction(function () use ($appointment) {
+            $lockedAppt = Appointment::with('client')->where('id', $appointment->id)->lockForUpdate()->firstOrFail();
+            $oldStatus = $lockedAppt->status;
+
+            $lockedAppt->update([
+                'status' => 'cancelled',
+            ]);
+
+            return $lockedAppt->refundRedeemedPoints($oldStatus);
+        });
+
+        $freshUser = $user->fresh();
 
         return response()->json([
             'status' => 'success',
             'message' => 'Votre rendez-vous a bien été annulé.',
-            'data' => new AppointmentResource($appointment->fresh(['barber', 'service'])),
+            'points_refunded' => $refunded,
+            'current_loyalty_points' => $freshUser->loyalty_points ?? 0,
+            'user' => new UserResource($freshUser),
+            'data' => new AppointmentResource($appointment->fresh(['barber', 'service', 'client'])),
         ]);
     }
 
@@ -337,6 +351,7 @@ class ClientAppointmentController extends Controller
             'status' => 'success',
             'data' => [
                 'points' => $points,
+                'cashback_mad' => (int) floor($points / 10),
                 'tier' => $tier,
                 'discount_percentage' => $discount,
                 'next_tier' => $nextTier,
