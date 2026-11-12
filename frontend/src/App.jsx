@@ -10,7 +10,7 @@ import './App.css';
 const LandingPage = React.lazy(() => import('./components/landing/LandingPage'));
 const LuxurySplitAuth = React.lazy(() => import('./components/auth/LuxurySplitAuth'));
 const ClientDashboard = React.lazy(() => import('./components/client/ClientDashboard'));
-const EmployePortal = React.lazy(() => import('./components/employe/EmployePortal'));
+const EmployeDashboard = React.lazy(() => import('./components/employe/EmployeDashboard'));
 const AdminPortal = React.lazy(() => import('./components/admin/AdminPortal'));
 const GoogleCallback = React.lazy(() => import('./components/auth/GoogleCallback'));
 
@@ -147,7 +147,7 @@ export default function App() {
                 path="/employe/*"
                 element={
                   <ProtectedRoute allowedRoles={['employe']}>
-                    <EmployePortal />
+                    <EmployeDashboard />
                   </ProtectedRoute>
                 }
               />

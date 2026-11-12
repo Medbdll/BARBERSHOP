@@ -73,6 +73,8 @@ Route::middleware(['auth:sanctum', 'role:employe|admin'])->prefix('employee')->g
     Route::patch('/appointments/{id}/status', [EmployeScheduleController::class, 'updateStatus']);
     Route::get('/schedule', [EmployeScheduleController::class, 'schedule']);
     Route::put('/working-hours', [EmployeScheduleController::class, 'updateWorkingHours']);
+    Route::patch('/availability', [EmployeScheduleController::class, 'updateAvailability']);
+    Route::put('/profile', [EmployeScheduleController::class, 'updateProfile']);
 });
 
 Route::middleware(['auth:sanctum', 'role:employe|admin'])->prefix('employe')->group(function () {
@@ -80,6 +82,8 @@ Route::middleware(['auth:sanctum', 'role:employe|admin'])->prefix('employe')->gr
     Route::patch('/appointments/{id}/status', [EmployeScheduleController::class, 'updateStatus']);
     Route::get('/schedule', [EmployeScheduleController::class, 'schedule']);
     Route::put('/working-hours', [EmployeScheduleController::class, 'updateWorkingHours']);
+    Route::patch('/availability', [EmployeScheduleController::class, 'updateAvailability']);
+    Route::put('/profile', [EmployeScheduleController::class, 'updateProfile']);
 });
 
 // ========================================================
