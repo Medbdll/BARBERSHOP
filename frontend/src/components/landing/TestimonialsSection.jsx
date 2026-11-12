@@ -1,6 +1,7 @@
 import React from 'react';
 import { testimonialsData as fallbackReviews } from '../../data/barberShopData';
 import { GoldStarIcon } from '../auth/AuthIcons';
+import { getImageUrl, handleImageFallbackError } from '../../utils/getImageUrl';
 
 export default function TestimonialsSection({
   lang,
@@ -53,7 +54,8 @@ export default function TestimonialsSection({
               const groomedByText = t.testimonials.groomedBy || (lang === 'ar' ? 'اعتنى به' : 'Soigné par');
               const vipClientText = t.testimonials.vipClient || (lang === 'ar' ? 'زبون مميز VIP' : 'Client Privilège VIP');
               const barberName = review.barber_name ? `${groomedByText} ${review.barber_name}` : (review.service || vipClientText);
-              const avatar = review.client_avatar || review.avatar;
+              const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(clientName || 'VIP')}&background=1F2937&color=D97706`;
+              const avatar = getImageUrl(review.client_avatar || review.avatar, fallbackAvatar);
               const rating = review.rating || 5;
               const quote = review.comment || (lang === 'ar' ? review.quoteAr : review.quoteFr);
 
@@ -84,10 +86,11 @@ export default function TestimonialsSection({
                   {/* Author Meta */}
                   <div className="flex items-center gap-3 pt-4 border-t border-gray-800/70">
                     <img
-                      src={avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(clientName || 'VIP')}&background=1F2937&color=D97706`}
+                      src={avatar}
                       alt={clientName}
                       loading="lazy"
                       decoding="async"
+                      onError={(e) => handleImageFallbackError(e, fallbackAvatar)}
                       className="w-11 h-11 rounded-full border border-amber-500/30 object-cover"
                     />
                     <div>

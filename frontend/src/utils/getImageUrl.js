@@ -79,3 +79,4 @@ export const handleImageFallbackError = (
 };
 
 export default getImageUrl;
+
