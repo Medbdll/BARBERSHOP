@@ -231,14 +231,23 @@ class User extends Authenticatable
             $barber = Barber::withTrashed()->where('user_id', $this->id)->first();
 
             if ($barber) {
-                // If barber has linked appointments, soft-delete and deactivate to preserve history
-                if ($barber->appointments()->exists()) {
-                    $barber->update(['is_active' => false]);
-                    $barber->delete(); // Soft delete
+                Appointment::where('barber_id', $barber->id)
+                    ->whereDate('appointment_date', '>=', now()->toDateString())
+                    ->where('status', 'pending')
+                    ->update(['status' => 'cancelled']);
+
+                if (! $barber->trashed()) {
+                    // If barber has linked appointments, soft-delete and deactivate to preserve history
+                    if ($barber->appointments()->exists()) {
+                        $barber->update(['is_active' => false]);
+                        $barber->delete(); // Soft delete
+                    } else {
+                        $barber->workingHours()->delete();
+                        $barber->reviews()->delete();
+                        $barber->forceDelete();
+                    }
                 } else {
-                    $barber->workingHours()->delete();
-                    $barber->reviews()->delete();
-                    $barber->forceDelete();
+                    $barber->update(['is_active' => false]);
                 }
 
                 Cache::forget('public_barbers_list');

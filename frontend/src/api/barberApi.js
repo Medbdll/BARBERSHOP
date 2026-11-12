@@ -271,18 +271,38 @@ export const updateEmployeeProfile = async (profileData) => {
  * =====================================================================
  */
 
+const sendAdminPayload = async (method, url, data) => {
+  if (typeof FormData !== 'undefined' && data instanceof FormData) {
+    if (method === 'put') {
+      data.append('_method', 'PUT');
+    }
+    const response = await api.post(url, data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  }
+
+  const response = await api[method](url, data);
+  return response.data;
+};
+
 export const getAdminStats = async () => {
   const response = await api.get('/admin/stats');
   return response.data;
 };
 
-export const getAdminUsers = async () => {
-  const response = await api.get('/admin/users');
+export const getAdminUsers = async (params = {}) => {
+  const response = await api.get('/admin/users', { params });
   return response.data;
 };
 
 export const createAdminUser = async (userData) => {
   const response = await api.post('/admin/users', userData);
+  return response.data;
+};
+
+export const toggleAdminUserStatus = async (id) => {
+  const response = await api.patch(`/admin/users/${id}/toggle-status`);
   return response.data;
 };
 
@@ -293,6 +313,11 @@ export const deleteAdminUser = async (id) => {
 
 export const syncUserRoles = async (userId, roles) => {
   const response = await api.post(`/admin/users/${userId}/sync-roles`, { roles });
+  return response.data;
+};
+
+export const updateUserRole = async (userId, role) => {
+  const response = await api.put(`/admin/users/${userId}/role`, { role });
   return response.data;
 };
 
@@ -312,13 +337,11 @@ export const getAdminServices = async () => {
 };
 
 export const createAdminService = async (serviceData) => {
-  const response = await api.post('/admin/services', serviceData);
-  return response.data;
+  return sendAdminPayload('post', '/admin/services', serviceData);
 };
 
 export const updateAdminService = async (id, serviceData) => {
-  const response = await api.put(`/admin/services/${id}`, serviceData);
-  return response.data;
+  return sendAdminPayload('put', `/admin/services/${id}`, serviceData);
 };
 
 export const deleteAdminService = async (id) => {
@@ -332,13 +355,11 @@ export const getAdminBarbers = async () => {
 };
 
 export const createAdminBarber = async (barberData) => {
-  const response = await api.post('/admin/barbers', barberData);
-  return response.data;
+  return sendAdminPayload('post', '/admin/barbers', barberData);
 };
 
 export const updateAdminBarber = async (id, barberData) => {
-  const response = await api.put(`/admin/barbers/${id}`, barberData);
-  return response.data;
+  return sendAdminPayload('put', `/admin/barbers/${id}`, barberData);
 };
 
 export const deleteAdminBarber = async (id) => {
@@ -355,6 +376,11 @@ export const approveReview = async (id, isApproved = true) => {
 
 export const getAdminAppointments = async (params = {}) => {
   const response = await api.get('/admin/appointments', { params });
+  return response.data;
+};
+
+export const createAdminAppointment = async (payload) => {
+  const response = await api.post('/admin/appointments', payload);
   return response.data;
 };
 

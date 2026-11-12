@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { useLanguage } from '../../context/LanguageContext';
-import BrandLogo from '../common/BrandLogo';
+import DashboardLogo from '../common/DashboardLogo';
 import LanguageSwitcher from '../common/LanguageSwitcher';
 import AvatarUploader from '../common/AvatarUploader';
 import BookingModal from '../landing/BookingModal';
@@ -744,7 +744,7 @@ export default function ClientDashboard() {
         <div className="p-6 border-b border-slate-800/80 space-y-4">
           <div className="flex items-center gap-3 text-start">
             <div className="w-10 h-10 rounded-xl bg-[#D9822B]/15 border border-[#D9822B]/40 flex items-center justify-center shrink-0">
-              <BrandLogo size={26} />
+              <DashboardLogo className="w-7 h-7" />
             </div>
             <div className="min-w-0">
               <div className="text-sm font-black tracking-wider text-white truncate">
@@ -839,6 +839,9 @@ export default function ClientDashboard() {
       <header className="lg:hidden sticky top-0 z-40 bg-[#10151F]/95 backdrop-blur-xl border-b border-slate-800/90 px-4 py-3">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0 text-start">
+            <div className="w-8 h-8 rounded-lg bg-[#D9822B]/15 border border-[#D9822B]/40 flex items-center justify-center shrink-0">
+              <DashboardLogo className="w-5 h-5" />
+            </div>
             <div className="w-9 h-9 rounded-full bg-[#10151F] border border-[#D9822B] text-[#D9822B] font-bold text-sm flex items-center justify-center overflow-hidden shrink-0">
               {userAvatarUrl ? (
                 <img

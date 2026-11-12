@@ -33,8 +33,12 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        // Assign 'client' role by default
-        $user->assignRole('client');
+        // First registered user = permanent admin, subsequent users = client
+        if (User::count() === 1) {
+            $user->syncRoles(['admin']);
+        } else {
+            $user->syncRoles(['client']);
+        }
 
         $token = $user->createToken('auth-token')->plainTextToken;
 
@@ -65,6 +69,12 @@ class AuthController extends Controller
         if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['Les identifiants fournis ne correspondent à aucun compte client ou employé.'],
+            ]);
+        }
+
+        if (($user->status ?? 'active') === 'blocked') {
+            throw ValidationException::withMessages([
+                'email' => ['Votre compte a été bloqué par un administrateur.'],
             ]);
         }
 

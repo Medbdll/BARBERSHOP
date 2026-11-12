@@ -900,7 +900,7 @@ export default function BookingStepper({
                           <div className="w-full">
                             <div className="flex items-start justify-between gap-2.5">
                               <h4 className="font-bold text-white group-hover:text-amber-400 transition-colors text-sm sm:text-base leading-snug">
-                                {service.name}
+                                {isAr ? (service.title_ar || service.name) : (service.title_fr || service.name)}
                               </h4>
                               <span
                                 className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
@@ -913,7 +913,7 @@ export default function BookingStepper({
                               </span>
                             </div>
                             <p className="mt-1.5 text-xs text-gray-400 line-clamp-2 leading-relaxed">
-                              {service.description ||
+                              {(isAr ? (service.description_ar || service.description) : (service.description_fr || service.description)) ||
                                 (isAr
                                   ? 'خدمة فاخرة مصممة بعناية ودقة عالية.'
                                   : 'Prestation sur-mesure de haute précision.')}
@@ -1447,7 +1447,7 @@ export default function BookingStepper({
                         <div className="text-end">
                           {selectedServices.map((s) => (
                             <div key={s.id} className="text-white font-semibold">
-                              {s.name} ({s.duration} {t.common.minutes})
+                              {isAr ? (s.title_ar || s.name) : (s.title_fr || s.name)} ({s.duration_minutes || s.duration} {t.common.minutes})
                             </div>
                           ))}
                         </div>
@@ -1570,7 +1570,7 @@ export default function BookingStepper({
                           key={s.id}
                           className="flex items-center justify-between gap-2 text-white font-medium"
                         >
-                          <span className="truncate">{s.name}</span>
+                          <span className="truncate">{isAr ? (s.title_ar || s.name) : (s.title_fr || s.name)}</span>
                           <span className="text-amber-400 shrink-0 font-semibold">
                             {s.price} {t.common.currency}
                           </span>

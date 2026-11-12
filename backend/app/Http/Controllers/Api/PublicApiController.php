@@ -31,7 +31,7 @@ class PublicApiController extends Controller
 
         $data = Cache::remember($cacheKey, 3600, function () use ($category) {
             $query = Service::where('is_active', true)
-                ->select(['id', 'name', 'category', 'duration', 'price', 'description', 'is_active']);
+                ->select(['id', 'name', 'title_fr', 'title_ar', 'category', 'duration', 'duration_minutes', 'price', 'description', 'description_fr', 'description_ar', 'image_url', 'is_active']);
 
             if ($category && $category !== 'all') {
                 $query->where('category', $category);
