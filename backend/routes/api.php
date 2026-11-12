@@ -120,6 +120,11 @@ Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(functi
     Route::put('/barbers/{id}', [AdminApiController::class, 'barbersUpdate']);
     Route::delete('/barbers/{id}', [AdminApiController::class, 'barbersDestroy']);
 
+    // Gallery Management
+    Route::post('/gallery', [AdminApiController::class, 'galleryStore']);
+    Route::put('/gallery/{id}', [AdminApiController::class, 'galleryUpdate']);
+    Route::delete('/gallery/{id}', [AdminApiController::class, 'galleryDestroy']);
+
     // Reviews Moderation
     Route::patch('/reviews/{id}/approve', [AdminApiController::class, 'approveReview']);
 });

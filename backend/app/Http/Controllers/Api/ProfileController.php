@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Models\Barber;
+use App\Support\MediaUrl;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -26,42 +27,28 @@ class ProfileController extends Controller
         $user = $request->user();
 
         // 1. Delete previous local avatar from public disk if one exists
-        //    (Skip external URLs such as Google OAuth avatars or third-party hosts)
-        $previousAvatar = $user->avatar;
-        if (is_string($previousAvatar) && $previousAvatar !== '') {
-            $localPath = null;
-
-            if (! str_starts_with($previousAvatar, 'http')) {
-                $localPath = ltrim(str_replace('/storage/', '', $previousAvatar), '/');
-            } else {
-                $parsedPath = parse_url($previousAvatar, PHP_URL_PATH) ?: '';
-                if (str_contains($parsedPath, '/storage/avatars/')) {
-                    $localPath = 'avatars/' . basename($parsedPath);
-                }
-            }
-
-            if ($localPath && Storage::disk('public')->exists($localPath)) {
-                Storage::disk('public')->delete($localPath);
-            }
+        //    (Never deletes external Google OAuth avatars or third-party URLs)
+        $localPath = MediaUrl::extractDeletableDiskPath($user->getRawOriginal('avatar'));
+        if ($localPath && Storage::disk('public')->exists($localPath)) {
+            Storage::disk('public')->delete($localPath);
         }
 
-        // 2. Store new uploaded avatar in storage/app/public/avatars
-        $path = $request->file('avatar')->store('avatars', 'public');
-        $avatarUrl = asset('storage/' . $path);
+        // 2. Store new uploaded avatar in storage/app/public/avatars and persist ONLY the relative path
+        $relativePath = $request->file('avatar')->store('avatars', 'public');
 
-        // 3. Save public URL to users.avatar
+        // 3. Save relative path to users.avatar (resolved dynamically by User::getAvatarAttribute)
         $user->update([
-            'avatar' => $avatarUrl,
+            'avatar' => $relativePath,
         ]);
 
         // 4. Sync Barber profile photo if user has employe role and linked barber record
         if ($user->hasAnyRole(['employe', 'employee'])) {
             $barberUpdate = [
-                'image_url' => $avatarUrl,
+                'image_url' => $relativePath,
             ];
 
             if (Schema::hasColumn('barbers', 'photo')) {
-                $barberUpdate['photo'] = $avatarUrl;
+                $barberUpdate['photo'] = $relativePath;
             }
 
             Barber::withTrashed()
@@ -76,7 +63,8 @@ class ProfileController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Photo de profil mise à jour avec succès.',
-            'avatar_url' => $avatarUrl,
+            'avatar_path' => $relativePath,
+            'avatar_url' => $freshUser->avatar,
             'user' => new UserResource($freshUser),
         ]);
     }

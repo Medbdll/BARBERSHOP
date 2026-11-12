@@ -1,5 +1,10 @@
 import React from 'react';
 import { lookbookData as fallbackGallery } from '../../data/barberShopData';
+import {
+  getImageUrl,
+  handleImageFallbackError,
+  DEFAULT_GALLERY_PLACEHOLDER,
+} from '../../utils/getImageUrl';
 
 export default function LookbookGallery({
   lang,
@@ -35,7 +40,7 @@ export default function LookbookGallery({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 auto-rows-[220px]">
           {sourceGallery.map((item, index) => {
             const title = item.title || (lang === 'ar' ? item.titleAr : item.titleFr);
-            const image = item.image_url || item.image;
+            const image = getImageUrl(item.image_url || item.image, DEFAULT_GALLERY_PLACEHOLDER);
             const categoryMap = {
               'Coupe & Barbe': t.lookbook.categories?.hairBeard || 'Coupe & Barbe',
               'Barbe Prestige': t.lookbook.categories?.beardPrestige || 'Barbe Prestige',
@@ -55,6 +60,7 @@ export default function LookbookGallery({
                   alt={title}
                   loading="lazy"
                   decoding="async"
+                  onError={(e) => handleImageFallbackError(e, DEFAULT_GALLERY_PLACEHOLDER)}
                   className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-gray-950/90 via-gray-950/30 to-transparent opacity-80 group-hover:opacity-90 transition-opacity"></div>

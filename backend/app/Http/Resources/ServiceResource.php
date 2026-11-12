@@ -22,6 +22,7 @@ class ServiceResource extends JsonResource
             'price' => (float) $this->price,
             'currency' => 'MAD',
             'description' => $this->description,
+            'image_url' => $this->image_url,
             'is_active' => (bool) $this->is_active,
             'created_at' => $this->created_at?->toIso8601String(),
         ];

@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/useAuth';
 import { useLanguage } from '../../context/LanguageContext';
 import { uploadProfileAvatar } from '../../api/barberApi';
+import { getImageUrl } from '../../utils/getImageUrl';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
 const MAX_FILE_BYTES = 2 * 1024 * 1024; // 2MB
@@ -56,18 +57,13 @@ export default function AvatarUploader({
     };
   }, [previewUrl]);
 
-  const resolvedAvatarUrl = useMemo(() => {
-    if (previewUrl) return previewUrl;
-    if (currentImage) return currentImage;
-    if (user?.avatar) return user.avatar;
-    if (
-      user?.profile_photo_url &&
-      !user.profile_photo_url.includes('ui-avatars.com')
-    ) {
-      return user.profile_photo_url;
-    }
-    return null;
-  }, [previewUrl, currentImage, user?.avatar, user?.profile_photo_url]);
+  const resolvedAvatarUrl =
+    previewUrl ||
+    getImageUrl(currentImage) ||
+    getImageUrl(user?.avatar) ||
+    (user?.profile_photo_url && !user.profile_photo_url.includes('ui-avatars.com')
+      ? getImageUrl(user.profile_photo_url)
+      : null);
 
   // First letter fallback from user.name
   const initialLetter = useMemo(() => {

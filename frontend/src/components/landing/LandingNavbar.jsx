@@ -5,6 +5,11 @@ import { useAuth } from '../../context/useAuth';
 import { useLanguage } from '../../context/LanguageContext';
 import BrandLogo from '../common/BrandLogo';
 import LanguageSwitcher from '../common/LanguageSwitcher';
+import {
+  getImageUrl,
+  handleImageFallbackError,
+  DEFAULT_AVATAR_PLACEHOLDER,
+} from '../../utils/getImageUrl';
 
 export default function LandingNavbar({
   lang: propLang,
@@ -99,8 +104,9 @@ export default function LandingNavbar({
                 >
                   {user?.avatar ? (
                     <img
-                      src={user.avatar}
+                      src={getImageUrl(user.avatar, DEFAULT_AVATAR_PLACEHOLDER)}
                       alt={user?.name || 'Avatar'}
+                      onError={(e) => handleImageFallbackError(e, DEFAULT_AVATAR_PLACEHOLDER)}
                       className="w-8 h-8 rounded-lg object-cover border border-[#D9822B]/60 shrink-0"
                     />
                   ) : (

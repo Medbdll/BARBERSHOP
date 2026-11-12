@@ -238,7 +238,7 @@ class PublicApiController extends Controller
             $reviews = Review::where('is_approved', true)
                 ->select(['id', 'client_id', 'barber_id', 'rating', 'comment', 'is_approved', 'created_at'])
                 ->with([
-                    'client:id,name,profile_photo_path',
+                    'client:id,name,avatar,profile_photo_path',
                     'barber:id,name',
                 ])
                 ->orderBy('created_at', 'desc')

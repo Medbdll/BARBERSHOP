@@ -13,6 +13,11 @@ import {
   updateEmployeeProfile,
 } from '../../api/barberApi';
 import { getTodayDateString, getRelativeScheduleStatus } from '../../utils/dateTime';
+import {
+  getImageUrl,
+  handleImageFallbackError,
+  DEFAULT_AVATAR_PLACEHOLDER,
+} from '../../utils/getImageUrl';
 
 const DEFAULT_WORKING_HOURS = [
   { day_of_week: 0, is_day_off: true, start_time: '09:30', end_time: '20:30', break_start: '13:00', break_end: '14:00' },
@@ -881,10 +886,10 @@ export default function EmployeDashboard() {
   }, [todayStr, isAr, copy.calendarTab.today, copy.calendarTab.tomorrow]);
 
   const userAvatarUrl =
-    user?.avatar ||
-    barberProfile?.image_url ||
+    getImageUrl(user?.avatar) ||
+    getImageUrl(barberProfile?.image_url) ||
     (user?.profile_photo_url && !user.profile_photo_url.includes('ui-avatars.com')
-      ? user.profile_photo_url
+      ? getImageUrl(user.profile_photo_url)
       : null);
 
   const userInitial = (barberProfile?.name || user?.name || 'B').trim().charAt(0).toUpperCase() || 'B';
@@ -1032,7 +1037,12 @@ export default function EmployeDashboard() {
           <div className="flex items-center gap-3 p-2.5 rounded-xl bg-[#182030] border border-slate-800 text-start">
             <div className="w-9 h-9 rounded-full bg-[#10151F] border border-[#D9822B] text-[#D9822B] font-bold text-sm flex items-center justify-center overflow-hidden shrink-0">
               {userAvatarUrl ? (
-                <img src={userAvatarUrl} alt={user?.name || 'Barber'} className="w-full h-full object-cover" />
+                <img
+                  src={userAvatarUrl}
+                  alt={user?.name || 'Barber'}
+                  onError={(e) => handleImageFallbackError(e, DEFAULT_AVATAR_PLACEHOLDER)}
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 userInitial
               )}
@@ -1068,7 +1078,12 @@ export default function EmployeDashboard() {
           <div className="flex items-center gap-2.5 min-w-0 text-start">
             <div className="w-9 h-9 rounded-full bg-[#10151F] border border-[#D9822B] text-[#D9822B] font-bold text-sm flex items-center justify-center overflow-hidden shrink-0">
               {userAvatarUrl ? (
-                <img src={userAvatarUrl} alt={user?.name || 'Barber'} className="w-full h-full object-cover" />
+                <img
+                  src={userAvatarUrl}
+                  alt={user?.name || 'Barber'}
+                  onError={(e) => handleImageFallbackError(e, DEFAULT_AVATAR_PLACEHOLDER)}
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 userInitial
               )}

@@ -10,15 +10,19 @@ use App\Http\Resources\ServiceResource;
 use App\Http\Resources\UserResource;
 use App\Models\Appointment;
 use App\Models\Barber;
+use App\Models\Gallery;
 use App\Models\Review;
 use App\Models\Service;
 use App\Models\User;
+use App\Support\MediaUrl;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -358,7 +362,7 @@ class AdminApiController extends Controller
     public function usersIndex(Request $request): JsonResponse
     {
         $users = User::with(['roles', 'permissions'])
-            ->select(['id', 'name', 'email', 'phone', 'loyalty_points', 'profile_photo_path', 'created_at'])
+            ->select(['id', 'name', 'email', 'phone', 'loyalty_points', 'avatar', 'profile_photo_path', 'created_at'])
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 
@@ -502,6 +506,31 @@ class AdminApiController extends Controller
         ]);
     }
 
+    /**
+     * Store an uploaded image file cleanly as a relative public-disk path, or normalize an image_url string.
+     */
+    protected function resolveStoredImagePath(
+        Request $request,
+        array &$data,
+        string $directory,
+        ?string $previousRawPath = null
+    ): void {
+        if ($request->hasFile('image')) {
+            $oldPath = MediaUrl::extractDeletableDiskPath($previousRawPath);
+            if ($oldPath && Storage::disk('public')->exists($oldPath)) {
+                Storage::disk('public')->delete($oldPath);
+            }
+
+            $data['image_url'] = $request->file('image')->store($directory, 'public');
+            unset($data['image']);
+            return;
+        }
+
+        if (array_key_exists('image_url', $data)) {
+            $data['image_url'] = MediaUrl::toStoragePath($data['image_url']);
+        }
+    }
+
     public function servicesStore(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -510,8 +539,16 @@ class AdminApiController extends Controller
             'duration' => ['required', 'integer', 'min:10', 'max:180'],
             'price' => ['required', 'numeric', 'min:0'],
             'description' => ['nullable', 'string'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
+            'image_url' => ['nullable', 'string', 'max:2048'],
             'is_active' => ['boolean'],
         ]);
+
+        if (Schema::hasColumn('services', 'image_url')) {
+            $this->resolveStoredImagePath($request, $data, 'services');
+        } else {
+            unset($data['image'], $data['image_url']);
+        }
 
         $service = Service::create($data);
         $this->invalidateServicesCache();
@@ -533,8 +570,16 @@ class AdminApiController extends Controller
             'duration' => ['sometimes', 'integer', 'min:10', 'max:180'],
             'price' => ['sometimes', 'numeric', 'min:0'],
             'description' => ['nullable', 'string'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
+            'image_url' => ['nullable', 'string', 'max:2048'],
             'is_active' => ['sometimes', 'boolean'],
         ]);
+
+        if (Schema::hasColumn('services', 'image_url')) {
+            $this->resolveStoredImagePath($request, $data, 'services', $service->getRawOriginal('image_url'));
+        } else {
+            unset($data['image'], $data['image_url']);
+        }
 
         $service->update($data);
         $this->invalidateServicesCache();
@@ -580,9 +625,12 @@ class AdminApiController extends Controller
             'experience' => ['required', 'string'],
             'rating' => ['nullable', 'numeric', 'min:1', 'max:5'],
             'bio' => ['nullable', 'string'],
-            'image_url' => ['nullable', 'url'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
+            'image_url' => ['nullable', 'string', 'max:2048'],
             'is_active' => ['boolean'],
         ]);
+
+        $this->resolveStoredImagePath($request, $data, 'barbers');
 
         $barber = Barber::create($data);
         Cache::forget('public_barbers_list');
@@ -605,9 +653,12 @@ class AdminApiController extends Controller
             'experience' => ['sometimes', 'string'],
             'rating' => ['nullable', 'numeric', 'min:1', 'max:5'],
             'bio' => ['nullable', 'string'],
-            'image_url' => ['nullable', 'url'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
+            'image_url' => ['nullable', 'string', 'max:2048'],
             'is_active' => ['sometimes', 'boolean'],
         ]);
+
+        $this->resolveStoredImagePath($request, $data, 'barbers', $barber->getRawOriginal('image_url'));
 
         $barber->update($data);
         Cache::forget('public_barbers_list');
@@ -628,6 +679,73 @@ class AdminApiController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Barbier supprimé de l’équipe.',
+        ]);
+    }
+
+    // ==========================================
+    // GALLERY CRUD (Relative storage paths only)
+    // ==========================================
+
+    public function galleryStore(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'category' => ['required', 'string', 'max:100'],
+            'image' => ['required_without:image_url', 'nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
+            'image_url' => ['required_without:image', 'nullable', 'string', 'max:2048'],
+            'is_active' => ['boolean'],
+        ]);
+
+        $this->resolveStoredImagePath($request, $data, 'gallery');
+
+        $item = Gallery::create($data);
+        Cache::forget('public_gallery_items');
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Photo ajoutée au lookbook.',
+            'data' => $item,
+        ], 201);
+    }
+
+    public function galleryUpdate(Request $request, int $id): JsonResponse
+    {
+        $item = Gallery::findOrFail($id);
+
+        $data = $request->validate([
+            'title' => ['sometimes', 'string', 'max:255'],
+            'category' => ['sometimes', 'string', 'max:100'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
+            'image_url' => ['nullable', 'string', 'max:2048'],
+            'is_active' => ['sometimes', 'boolean'],
+        ]);
+
+        $this->resolveStoredImagePath($request, $data, 'gallery', $item->getRawOriginal('image_url'));
+
+        $item->update($data);
+        Cache::forget('public_gallery_items');
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Photo du lookbook mise à jour.',
+            'data' => $item->fresh(),
+        ]);
+    }
+
+    public function galleryDestroy(int $id): JsonResponse
+    {
+        $item = Gallery::findOrFail($id);
+        $oldPath = MediaUrl::extractDeletableDiskPath($item->getRawOriginal('image_url'));
+        if ($oldPath && Storage::disk('public')->exists($oldPath)) {
+            Storage::disk('public')->delete($oldPath);
+        }
+
+        $item->delete();
+        Cache::forget('public_gallery_items');
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Photo supprimée du lookbook.',
         ]);
     }
 

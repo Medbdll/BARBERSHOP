@@ -4,6 +4,11 @@ import { useAuth } from '../../context/useAuth';
 import { useLanguage } from '../../context/LanguageContext';
 import BrandLogo from '../common/BrandLogo';
 import LanguageSwitcher from '../common/LanguageSwitcher';
+import {
+  getImageUrl,
+  handleImageFallbackError,
+  DEFAULT_AVATAR_PLACEHOLDER,
+} from '../../utils/getImageUrl';
 
 export default function DashboardLayout({ title, subtitle, children, navItems = [] }) {
   const { user, logout, isAdmin, isEmploye, isClient } = useAuth();
@@ -101,10 +106,11 @@ export default function DashboardLayout({ title, subtitle, children, navItems = 
               <div className="flex items-center gap-2 pl-2">
                 {user?.avatar || (user?.profile_photo_url && !user.profile_photo_url.includes('ui-avatars.com')) ? (
                   <img
-                    src={user?.avatar || user?.profile_photo_url}
+                    src={getImageUrl(user?.avatar || user?.profile_photo_url, DEFAULT_AVATAR_PLACEHOLDER)}
                     alt={user?.name || 'Profil'}
                     loading="lazy"
                     decoding="async"
+                    onError={(e) => handleImageFallbackError(e, DEFAULT_AVATAR_PLACEHOLDER)}
                     className="w-8 h-8 rounded-full border border-[#D9822B] object-cover shrink-0"
                   />
                 ) : (

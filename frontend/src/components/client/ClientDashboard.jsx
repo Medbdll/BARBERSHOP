@@ -17,6 +17,11 @@ import {
   updateUserProfile,
 } from '../../api/barberApi';
 import { getTodayDateString, isSlotInPast } from '../../utils/dateTime';
+import {
+  getImageUrl,
+  handleImageFallbackError,
+  DEFAULT_AVATAR_PLACEHOLDER,
+} from '../../utils/getImageUrl';
 
 const PENDING_BOOKING_KEY = 'pending_booking';
 
@@ -678,13 +683,11 @@ export default function ClientDashboard() {
     return trimmed ? trimmed.charAt(0).toUpperCase() : 'B';
   }, [user?.name]);
 
-  const userAvatarUrl = useMemo(() => {
-    if (user?.avatar) return user.avatar;
-    if (user?.profile_photo_url && !user.profile_photo_url.includes('ui-avatars.com')) {
-      return user.profile_photo_url;
-    }
-    return null;
-  }, [user?.avatar, user?.profile_photo_url]);
+  const userAvatarUrl =
+    getImageUrl(user?.avatar) ||
+    (user?.profile_photo_url && !user.profile_photo_url.includes('ui-avatars.com')
+      ? getImageUrl(user.profile_photo_url)
+      : null);
 
   const navItems = useMemo(
     () => [
@@ -801,7 +804,12 @@ export default function ClientDashboard() {
           <div className="flex items-center gap-3 p-2.5 rounded-xl bg-[#182030] border border-slate-800 text-start">
             <div className="w-9 h-9 rounded-full bg-[#10151F] border border-[#D9822B] text-[#D9822B] font-bold text-sm flex items-center justify-center overflow-hidden shrink-0">
               {userAvatarUrl ? (
-                <img src={userAvatarUrl} alt={user?.name || 'Avatar'} className="w-full h-full object-cover" />
+                <img
+                  src={userAvatarUrl}
+                  alt={user?.name || 'Avatar'}
+                  onError={(e) => handleImageFallbackError(e, DEFAULT_AVATAR_PLACEHOLDER)}
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 userInitial
               )}
@@ -833,7 +841,12 @@ export default function ClientDashboard() {
           <div className="flex items-center gap-2.5 min-w-0 text-start">
             <div className="w-9 h-9 rounded-full bg-[#10151F] border border-[#D9822B] text-[#D9822B] font-bold text-sm flex items-center justify-center overflow-hidden shrink-0">
               {userAvatarUrl ? (
-                <img src={userAvatarUrl} alt={user?.name || 'Avatar'} className="w-full h-full object-cover" />
+                <img
+                  src={userAvatarUrl}
+                  alt={user?.name || 'Avatar'}
+                  onError={(e) => handleImageFallbackError(e, DEFAULT_AVATAR_PLACEHOLDER)}
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 userInitial
               )}
@@ -996,11 +1009,12 @@ export default function ClientDashboard() {
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex items-center gap-3 min-w-0">
                               <img
-                                src={
-                                  appt.barber?.image_url ||
-                                  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300'
-                                }
+                                src={getImageUrl(
+                                  appt.barber?.image_url,
+                                  DEFAULT_AVATAR_PLACEHOLDER
+                                )}
                                 alt={appt.barber?.name || 'Barber'}
+                                onError={(e) => handleImageFallbackError(e, DEFAULT_AVATAR_PLACEHOLDER)}
                                 className="w-12 h-12 rounded-xl object-cover border border-[#D9822B]/30 shrink-0"
                               />
                               <div className="min-w-0">
@@ -1117,11 +1131,12 @@ export default function ClientDashboard() {
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex items-center gap-3 min-w-0">
                               <img
-                                src={
-                                  appt.barber?.image_url ||
-                                  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300'
-                                }
+                                src={getImageUrl(
+                                  appt.barber?.image_url,
+                                  DEFAULT_AVATAR_PLACEHOLDER
+                                )}
                                 alt={appt.barber?.name || 'Barber'}
+                                onError={(e) => handleImageFallbackError(e, DEFAULT_AVATAR_PLACEHOLDER)}
                                 className="w-11 h-11 rounded-xl object-cover border border-slate-700 shrink-0"
                               />
                               <div className="min-w-0">
@@ -1202,11 +1217,12 @@ export default function ClientDashboard() {
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <img
-                            src={
-                              barber.image_url ||
-                              'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300'
-                            }
+                            src={getImageUrl(
+                              barber.image_url,
+                              DEFAULT_AVATAR_PLACEHOLDER
+                            )}
                             alt={barber.name}
+                            onError={(e) => handleImageFallbackError(e, DEFAULT_AVATAR_PLACEHOLDER)}
                             className="w-12 h-12 rounded-xl object-cover border border-[#D9822B]/30 shrink-0"
                           />
                           <div className="min-w-0">
