@@ -654,108 +654,22 @@ class AdminApiController extends Controller
 
     public function servicesIndex(): JsonResponse
     {
-        $services = Service::all();
-        return response()->json([
-            'status' => 'success',
-            'data' => ServiceResource::collection($services),
-        ]);
-    }
-
-    /**
-     * Store an uploaded image file cleanly as a relative public-disk path, or normalize an image_url string.
-     */
-    protected function resolveStoredImagePath(
-        Request $request,
-        array &$data,
-        string $directory,
-        ?string $previousRawPath = null
-    ): void {
-        if ($request->hasFile('image')) {
-            $oldPath = MediaUrl::extractDeletableDiskPath($previousRawPath);
-            if ($oldPath && Storage::disk('public')->exists($oldPath)) {
-                Storage::disk('public')->delete($oldPath);
-            }
-
-            $data['image_url'] = $request->file('image')->store($directory, 'public');
-            unset($data['image']);
-            return;
-        }
-
-        if (array_key_exists('image_url', $data)) {
-            $data['image_url'] = MediaUrl::toStoragePath($data['image_url']);
-        }
+        return app(ServiceController::class)->index();
     }
 
     public function servicesStore(Request $request): JsonResponse
     {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'category' => ['required', 'in:hair,beard,care,vip'],
-            'duration' => ['required', 'integer', 'min:10', 'max:180'],
-            'price' => ['required', 'numeric', 'min:0'],
-            'description' => ['nullable', 'string'],
-            'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
-            'image_url' => ['nullable', 'string', 'max:2048'],
-            'is_active' => ['boolean'],
-        ]);
-
-        if (Schema::hasColumn('services', 'image_url')) {
-            $this->resolveStoredImagePath($request, $data, 'services');
-        } else {
-            unset($data['image'], $data['image_url']);
-        }
-
-        $service = Service::create($data);
-        $this->invalidateServicesCache();
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Prestation ajoutée à la carte.',
-            'data' => new ServiceResource($service),
-        ], 201);
+        return app(ServiceController::class)->store($request);
     }
 
     public function servicesUpdate(Request $request, int $id): JsonResponse
     {
-        $service = Service::findOrFail($id);
-
-        $data = $request->validate([
-            'name' => ['sometimes', 'string', 'max:255'],
-            'category' => ['sometimes', 'in:hair,beard,care,vip'],
-            'duration' => ['sometimes', 'integer', 'min:10', 'max:180'],
-            'price' => ['sometimes', 'numeric', 'min:0'],
-            'description' => ['nullable', 'string'],
-            'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
-            'image_url' => ['nullable', 'string', 'max:2048'],
-            'is_active' => ['sometimes', 'boolean'],
-        ]);
-
-        if (Schema::hasColumn('services', 'image_url')) {
-            $this->resolveStoredImagePath($request, $data, 'services', $service->getRawOriginal('image_url'));
-        } else {
-            unset($data['image'], $data['image_url']);
-        }
-
-        $service->update($data);
-        $this->invalidateServicesCache();
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Prestation mise à jour.',
-            'data' => new ServiceResource($service),
-        ]);
+        return app(ServiceController::class)->update($request, $id);
     }
 
     public function servicesDestroy(int $id): JsonResponse
     {
-        $service = Service::findOrFail($id);
-        $service->delete();
-        $this->invalidateServicesCache();
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Prestation supprimée.',
-        ]);
+        return app(ServiceController::class)->destroy($id);
     }
 
     // ==========================================

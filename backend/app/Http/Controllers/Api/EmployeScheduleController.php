@@ -305,55 +305,7 @@ class EmployeScheduleController extends Controller
      */
     public function updateStatus(Request $request, int $id): JsonResponse
     {
-        $request->validate([
-            'status' => ['required', 'in:pending,confirmed,in_progress,completed,cancelled,no_show'],
-        ]);
-
-        $user = $request->user();
-        $query = Appointment::where('id', $id);
-
-        if (! $user->hasRole('admin')) {
-            $barber = $this->getBarber($request);
-
-            if (! $barber) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Aucun profil de barbier associé à ce compte employé.',
-                ], 403);
-            }
-
-            $query->where('barber_id', $barber->id);
-        }
-
-        $appointment = $query->first();
-
-        if (! $appointment) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Rendez-vous introuvable ou non assigné à votre poste.',
-            ], 403);
-        }
-
-        DB::transaction(function () use ($appointment, $request) {
-            $lockedAppt = Appointment::with('client')->where('id', $appointment->id)->lockForUpdate()->firstOrFail();
-            $oldStatus = $lockedAppt->status;
-
-            $lockedAppt->update([
-                'status' => $request->status,
-            ]);
-
-            if ($request->status === 'completed') {
-                $lockedAppt->creditLoyaltyPoints();
-            } elseif ($request->status === 'cancelled') {
-                $lockedAppt->refundRedeemedPoints($oldStatus);
-            }
-        });
-
-        return response()->json([
-            'status' => 'success',
-            'message' => "Le statut du rendez-vous #{$id} est maintenant : {$request->status}",
-            'data' => new AppointmentResource($appointment->fresh(['client', 'service', 'barber'])),
-        ]);
+        return app(EmployeAppointmentController::class)->updateStatus($request, $id);
     }
 
     /**

@@ -77,8 +77,8 @@ export default function ServicesSection({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredServices.map((service) => {
             const isSelected = selectedServiceId === service.id;
-            const name = lang === 'ar' ? (service.nameAr || service.name) : (service.nameFr || service.name);
-            const desc = lang === 'ar' ? (service.descriptionAr || service.description) : (service.descriptionFr || service.description);
+            const name = lang === 'ar' ? (service.title_ar || service.nameAr || service.name) : (service.title_fr || service.nameFr || service.name);
+            const desc = lang === 'ar' ? (service.description_ar || service.descriptionAr || service.description) : (service.description_fr || service.descriptionFr || service.description);
             const rawDuration = typeof service.duration === 'number' ? service.duration : parseInt(service.duration, 10) || 30;
             const formattedDuration = `${rawDuration} ${t.common?.minutes || 'min'}`;
             const currencyLabel = t.common?.currency || 'MAD';

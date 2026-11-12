@@ -6,10 +6,12 @@ use App\Http\Controllers\Api\AppointmentController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BarberController;
 use App\Http\Controllers\Api\ClientAppointmentController;
+use App\Http\Controllers\Api\EmployeAppointmentController;
 use App\Http\Controllers\Api\EmployeScheduleController;
 use App\Http\Controllers\Api\GoogleAuthController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\PublicApiController;
+use App\Http\Controllers\Api\ServiceController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -60,28 +62,31 @@ Route::middleware(['auth:sanctum', 'role:client'])->prefix('client')->group(func
     Route::get('/loyalty', [ClientAppointmentController::class, 'loyalty']);
 });
 
-// Direct booking route & queue status for authenticated users
-Route::middleware('auth:sanctum')->group(function () {
+// Direct booking route restricted strictly to role:client
+Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::post('/appointments', [AppointmentController::class, 'store']);
+});
+
+Route::middleware('auth:sanctum')->group(function () {
     Route::get('/client/appointments/{id}/queue-status', [ClientAppointmentController::class, 'queueStatus']);
 });
 
 // ========================================================
-// 4. EMPLOYÉ / BARBER ROUTES (auth:sanctum, role:employe|admin)
+// 4. EMPLOYÉ / BARBER ROUTES (auth:sanctum, role:employe)
 // Supports both /api/employee and /api/employe prefixes
 // ========================================================
-Route::middleware(['auth:sanctum', 'role:employe|admin'])->prefix('employee')->group(function () {
+Route::middleware(['auth:sanctum', 'role:employe'])->prefix('employee')->group(function () {
     Route::get('/appointments', [EmployeScheduleController::class, 'appointments']);
-    Route::patch('/appointments/{id}/status', [EmployeScheduleController::class, 'updateStatus']);
+    Route::patch('/appointments/{id}/status', [EmployeAppointmentController::class, 'updateStatus']);
     Route::get('/schedule', [EmployeScheduleController::class, 'schedule']);
     Route::put('/working-hours', [EmployeScheduleController::class, 'updateWorkingHours']);
     Route::patch('/availability', [EmployeScheduleController::class, 'updateAvailability']);
     Route::put('/profile', [EmployeScheduleController::class, 'updateProfile']);
 });
 
-Route::middleware(['auth:sanctum', 'role:employe|admin'])->prefix('employe')->group(function () {
+Route::middleware(['auth:sanctum', 'role:employe'])->prefix('employe')->group(function () {
     Route::get('/appointments', [EmployeScheduleController::class, 'appointments']);
-    Route::patch('/appointments/{id}/status', [EmployeScheduleController::class, 'updateStatus']);
+    Route::patch('/appointments/{id}/status', [EmployeAppointmentController::class, 'updateStatus']);
     Route::get('/schedule', [EmployeScheduleController::class, 'schedule']);
     Route::put('/working-hours', [EmployeScheduleController::class, 'updateWorkingHours']);
     Route::patch('/availability', [EmployeScheduleController::class, 'updateAvailability']);
@@ -112,11 +117,11 @@ Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(functi
     Route::get('/roles-permissions', [AdminApiController::class, 'rolesPermissions']);
     Route::post('/roles/{id}/sync-permissions', [AdminApiController::class, 'syncPermissions']);
 
-    // Services apiResource
-    Route::get('/services', [AdminApiController::class, 'servicesIndex']);
-    Route::post('/services', [AdminApiController::class, 'servicesStore']);
-    Route::put('/services/{id}', [AdminApiController::class, 'servicesUpdate']);
-    Route::delete('/services/{id}', [AdminApiController::class, 'servicesDestroy']);
+    // Services apiResource (Bilingual CRUD)
+    Route::get('/services', [ServiceController::class, 'index']);
+    Route::post('/services', [ServiceController::class, 'store']);
+    Route::put('/services/{id}', [ServiceController::class, 'update']);
+    Route::delete('/services/{id}', [ServiceController::class, 'destroy']);
 
     // Barbers apiResource
     Route::get('/barbers', [AdminApiController::class, 'barbersIndex']);

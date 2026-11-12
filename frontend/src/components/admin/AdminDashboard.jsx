@@ -14,8 +14,6 @@ import {
 import {
   getAdminStats,
   getAdminAppointments,
-  createAdminAppointment,
-  updateAdminAppointmentStatus,
   getAdminServices,
   createAdminService,
   updateAdminService,
@@ -24,7 +22,6 @@ import {
   updateAdminBarber,
   deleteAdminBarber,
   getAdminUsers,
-  createAdminUser,
   toggleAdminUserStatus,
   updateUserRole,
 } from '../../api/barberApi';
@@ -111,10 +108,14 @@ const ADMIN_COPY = {
       modalAdd: 'Nouvelle Prestation',
       modalEdit: 'Modifier la Prestation',
       nameLabel: 'Nom de la prestation',
+      titleFrLabel: 'Titre (FR)',
+      titleArLabel: 'العنوان (AR)',
       categoryLabel: 'Catégorie',
       durationLabel: 'Durée (min)',
       priceLabel: 'Tarif (MAD)',
       descLabel: 'Description',
+      descFrLabel: 'Description (FR)',
+      descArLabel: 'الوصف (AR)',
       imageUrlLabel: 'URL Image ou chemin',
       imageFileLabel: 'Ou importer une image',
       activeLabel: 'Prestation active en ligne',
@@ -263,10 +264,14 @@ const ADMIN_COPY = {
       modalAdd: 'إضافة خدمة جديدة',
       modalEdit: 'تعديل الخدمة',
       nameLabel: 'اسم الخدمة',
+      titleFrLabel: 'العنوان بالفرنسية (FR)',
+      titleArLabel: 'العنوان بالعربية (AR)',
       categoryLabel: 'الفئة',
       durationLabel: 'المدة (دقيقة)',
       priceLabel: 'السعر (درهم)',
       descLabel: 'الوصف',
+      descFrLabel: 'الوصف بالفرنسية (FR)',
+      descArLabel: 'الوصف بالعربية (AR)',
       imageUrlLabel: 'رابط الصورة أو المسار',
       imageFileLabel: 'أو تحميل صورة',
       activeLabel: 'الخدمة متاحة للحجز',
@@ -362,14 +367,12 @@ function AdminAppointmentCard({
   appt,
   copy,
   isAr,
-  updatingId,
-  onStatusChange,
-  onRequestCancel,
   showDate = true,
 }) {
-  const isBusy = updatingId === appt.id;
-  const isFinal = ['completed', 'cancelled', 'no_show'].includes(appt.status);
   const hasDiscount = Number(appt.discount_amount || 0) > 0 || Number(appt.points_used || 0) > 0;
+  const serviceTitle = isAr
+    ? (appt.service?.title_ar || appt.service?.name)
+    : (appt.service?.title_fr || appt.service?.name);
 
   return (
     <article className="p-4 sm:p-5 rounded-2xl bg-[#182030] border border-slate-800 hover:border-[#D9822B]/40 transition-all shadow-lg space-y-3">
@@ -393,9 +396,9 @@ function AdminAppointmentCard({
             </div>
 
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              {appt.service?.name && (
+              {serviceTitle && (
                 <span className="px-2 py-0.5 rounded-md bg-[#D9822B]/15 border border-[#D9822B]/35 text-[#D9822B] font-semibold">
-                  ✂️ {appt.service.name}
+                  ✂️ {serviceTitle}
                 </span>
               )}
               {appt.barber?.name && (
@@ -438,45 +441,6 @@ function AdminAppointmentCard({
           </div>
         </div>
       </div>
-
-      {!isFinal && (
-        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-800/80">
-          {appt.status === 'pending' && (
-            <button
-              type="button"
-              disabled={isBusy}
-              onClick={() => onStatusChange(appt.id, 'confirmed')}
-              className="min-h-[36px] px-3 py-1.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/40 text-sky-300 text-xs font-bold transition cursor-pointer disabled:opacity-50"
-            >
-              {copy.actions.confirm}
-            </button>
-          )}
-          <button
-            type="button"
-            disabled={isBusy}
-            onClick={() => onStatusChange(appt.id, 'completed')}
-            className="min-h-[36px] px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition cursor-pointer disabled:opacity-50"
-          >
-            {copy.actions.complete}
-          </button>
-          <button
-            type="button"
-            disabled={isBusy}
-            onClick={() => onStatusChange(appt.id, 'no_show')}
-            className="min-h-[36px] px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-semibold transition cursor-pointer disabled:opacity-50"
-          >
-            {copy.actions.noShow}
-          </button>
-          <button
-            type="button"
-            disabled={isBusy}
-            onClick={() => onRequestCancel(appt)}
-            className="min-h-[36px] px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-semibold transition cursor-pointer disabled:opacity-50"
-          >
-            {copy.actions.cancel}
-          </button>
-        </div>
-      )}
     </article>
   );
 }
@@ -509,34 +473,18 @@ export default function AdminDashboard() {
 
   // Clients Tab Search
   const [clientSearch, setClientSearch] = useState('');
-  const [updatingApptId, setUpdatingApptId] = useState(null);
   const [togglingUserId, setTogglingUserId] = useState(null);
-
-  // Modals
-  const [cancelModal, setCancelModal] = useState({ isOpen: false, appointment: null });
-
-  const [walkInModalOpen, setWalkInModalOpen] = useState(false);
-  const [walkInMode, setWalkInMode] = useState('guest'); // 'guest' | 'existing'
-  const [walkInSubmitting, setWalkInSubmitting] = useState(false);
-  const [walkInForm, setWalkInForm] = useState({
-    client_id: '',
-    client_name: '',
-    client_phone: '',
-    barber_id: '',
-    service_id: '',
-    appointment_date: todayStr,
-    start_time: '12:00',
-    notes: '',
-  });
 
   const [serviceModal, setServiceModal] = useState({ isOpen: false, item: null });
   const [serviceSaving, setServiceSaving] = useState(false);
   const [serviceForm, setServiceForm] = useState({
-    name: '',
+    title_fr: '',
+    title_ar: '',
     category: 'hair',
     duration: 30,
     price: 120,
-    description: '',
+    description_fr: '',
+    description_ar: '',
     image_url: '',
     imageFile: null,
     is_active: true,
@@ -552,15 +500,6 @@ export default function AdminDashboard() {
     image_url: '',
     imageFile: null,
     is_active: true,
-  });
-
-  const [newEmployeModal, setNewEmployeModal] = useState(false);
-  const [creatingEmploye, setCreatingEmploye] = useState(false);
-  const [newEmployeForm, setNewEmployeForm] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    password: '',
   });
 
   const [updatingRoleUserId, setUpdatingRoleUserId] = useState(null);
@@ -663,80 +602,6 @@ export default function AdminDashboard() {
     return () => clearTimeout(timer);
   }, [loadFilteredAppointments]);
 
-  // Status Update Handler
-  const handleStatusChange = async (id, newStatus) => {
-    setUpdatingApptId(id);
-    try {
-      const res = await updateAdminAppointmentStatus(id, newStatus);
-      const updated = res?.data;
-
-      await Promise.all([loadDashboardCatalogs(), loadFilteredAppointments()]);
-
-      if (newStatus === 'completed') {
-        const earned = Number(updated?.points_earned || 0);
-        showToast(
-          earned > 0
-            ? copy.appointments.pointsCreditedToast.replace('{pts}', String(earned))
-            : `${copy.statuses.completed} ✓`
-        );
-      } else {
-        showToast(`${copy.statuses[newStatus] || newStatus} ✓`);
-      }
-    } catch (err) {
-      showToast(err?.response?.data?.message || 'Erreur mise à jour.', 'error');
-    } finally {
-      setUpdatingApptId(null);
-      setCancelModal({ isOpen: false, appointment: null });
-    }
-  };
-
-  // Walk-in Booking Submission
-  const handleOpenWalkIn = () => {
-    setWalkInForm({
-      client_id: '',
-      client_name: '',
-      client_phone: '',
-      barber_id: barbers[0]?.id ? String(barbers[0].id) : '',
-      service_id: services[0]?.id ? String(services[0].id) : '',
-      appointment_date: todayStr,
-      start_time: '12:00',
-      notes: '',
-    });
-    setWalkInModalOpen(true);
-  };
-
-  const handleSubmitWalkIn = async (e) => {
-    e.preventDefault();
-    setWalkInSubmitting(true);
-    try {
-      const payload = {
-        barber_id: Number(walkInForm.barber_id),
-        service_id: Number(walkInForm.service_id),
-        appointment_date: walkInForm.appointment_date,
-        start_time: walkInForm.start_time,
-        notes: walkInForm.notes || null,
-      };
-      if (walkInMode === 'existing' && walkInForm.client_id) {
-        payload.client_id = Number(walkInForm.client_id);
-      } else {
-        payload.client_name = walkInForm.client_name;
-        payload.client_phone = walkInForm.client_phone;
-      }
-
-      await createAdminAppointment(payload);
-      setWalkInModalOpen(false);
-      showToast(isAr ? 'تم تسجيل الحجز اليدوي بنجاح.' : 'Rendez-vous manuel créé avec succès.');
-      await Promise.all([loadDashboardCatalogs(), loadFilteredAppointments()]);
-    } catch (err) {
-      const errs = err?.response?.data?.errors
-        ? Object.values(err.response.data.errors).flat().join(' ')
-        : null;
-      showToast(errs || err?.response?.data?.message || 'Erreur lors de la création.', 'error');
-    } finally {
-      setWalkInSubmitting(false);
-    }
-  };
-
   // Export CSV / PDF
   const handleExportCSV = () => {
     const source = appointments.length > 0 ? appointments : todayQueue;
@@ -793,22 +658,26 @@ export default function AdminDashboard() {
     setServiceModal({ isOpen: true, item });
     if (item) {
       setServiceForm({
-        name: item.name || '',
+        title_fr: item.title_fr || item.name || '',
+        title_ar: item.title_ar || item.title_fr || item.name || '',
         category: item.category || 'hair',
-        duration: item.duration || 30,
+        duration: item.duration_minutes || item.duration || 30,
         price: item.price || 100,
-        description: item.description || '',
+        description_fr: item.description_fr || item.description || '',
+        description_ar: item.description_ar || item.description_fr || item.description || '',
         image_url: item.image_url || '',
         imageFile: null,
         is_active: Boolean(item.is_active),
       });
     } else {
       setServiceForm({
-        name: '',
+        title_fr: '',
+        title_ar: '',
         category: 'hair',
         duration: 30,
         price: 120,
-        description: '',
+        description_fr: '',
+        description_ar: '',
         image_url: '',
         imageFile: null,
         is_active: true,
@@ -821,22 +690,39 @@ export default function AdminDashboard() {
     setServiceSaving(true);
     try {
       let payload;
+      const durationVal = Number(serviceForm.duration) || 30;
+      const priceVal = Number(serviceForm.price) || 0;
+      const titleFr = serviceForm.title_fr.trim();
+      const titleAr = (serviceForm.title_ar || serviceForm.title_fr).trim();
+      const descFr = (serviceForm.description_fr || '').trim();
+      const descAr = (serviceForm.description_ar || serviceForm.description_fr || '').trim();
+
       if (serviceForm.imageFile) {
         payload = new FormData();
-        payload.append('name', serviceForm.name);
+        payload.append('title_fr', titleFr);
+        payload.append('title_ar', titleAr);
+        payload.append('name', titleFr);
         payload.append('category', serviceForm.category);
-        payload.append('duration', String(serviceForm.duration));
-        payload.append('price', String(serviceForm.price));
-        payload.append('description', serviceForm.description || '');
+        payload.append('duration', String(durationVal));
+        payload.append('duration_minutes', String(durationVal));
+        payload.append('price', String(priceVal));
+        payload.append('description_fr', descFr);
+        payload.append('description_ar', descAr);
+        payload.append('description', descFr);
         payload.append('is_active', serviceForm.is_active ? '1' : '0');
         payload.append('image', serviceForm.imageFile);
       } else {
         payload = {
-          name: serviceForm.name,
+          title_fr: titleFr,
+          title_ar: titleAr,
+          name: titleFr,
           category: serviceForm.category,
-          duration: Number(serviceForm.duration),
-          price: Number(serviceForm.price),
-          description: serviceForm.description || '',
+          duration: durationVal,
+          duration_minutes: durationVal,
+          price: priceVal,
+          description_fr: descFr,
+          description_ar: descAr,
+          description: descFr,
           image_url: serviceForm.image_url || null,
           is_active: Boolean(serviceForm.is_active),
         };
@@ -919,28 +805,7 @@ export default function AdminDashboard() {
     }
   };
 
-  // Create New Employee (Barber) User
-  const handleCreateEmploye = async (e) => {
-    e.preventDefault();
-    setCreatingEmploye(true);
-    try {
-      await createAdminUser({
-        ...newEmployeForm,
-        role: 'employe',
-      });
-      setNewEmployeModal(false);
-      setNewEmployeForm({ name: '', email: '', phone: '', password: '' });
-      await loadDashboardCatalogs();
-      showToast(isAr ? 'تمت إضافة الحلاق وتفعيل ملفه بنجاح.' : 'Employé barbier créé et activé.');
-    } catch (err) {
-      const errs = err?.response?.data?.errors
-        ? Object.values(err.response.data.errors).flat().join(' ')
-        : null;
-      showToast(errs || err?.response?.data?.message || 'Erreur création employé.', 'error');
-    } finally {
-      setCreatingEmploye(false);
-    }
-  };
+
 
   // Single-Role Selection & Barber-User Sync
   const handleSingleRoleChange = async (targetUser, newRole) => {
@@ -1140,14 +1005,6 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
-
-          <button
-            type="button"
-            onClick={handleOpenWalkIn}
-            className="w-full min-h-[44px] px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider text-white bg-gradient-to-r from-[#D9822B] to-[#b86719] hover:from-[#e4903a] hover:to-[#D9822B] shadow-lg shadow-[#D9822B]/20 transition cursor-pointer flex items-center justify-center gap-2"
-          >
-            {copy.walkInCta}
-          </button>
         </div>
 
         <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto">
@@ -1269,14 +1126,6 @@ export default function AdminDashboard() {
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 <span>{copy.liveSync}</span>
               </div>
-
-              <button
-                type="button"
-                onClick={handleOpenWalkIn}
-                className="lg:hidden min-h-[38px] px-4 py-2 rounded-xl font-bold text-xs text-white bg-[#D9822B] hover:bg-[#e4903a] shadow-lg shadow-[#D9822B]/20 cursor-pointer"
-              >
-                {copy.walkInCta}
-              </button>
 
               <button
                 type="button"
@@ -1409,13 +1258,6 @@ export default function AdminDashboard() {
                     </h2>
                     <p className="text-xs text-slate-400 mt-0.5">{copy.overview.liveFeedSubtitle}</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleOpenWalkIn}
-                    className="min-h-[40px] px-4 py-2 rounded-xl bg-[#D9822B] hover:bg-[#e4903a] text-white text-xs font-bold shadow cursor-pointer shrink-0"
-                  >
-                    {copy.walkInCta}
-                  </button>
                 </div>
 
                 {todayQueue.length === 0 ? (
@@ -1430,10 +1272,7 @@ export default function AdminDashboard() {
                         appt={appt}
                         copy={copy}
                         isAr={isAr}
-                        updatingId={updatingApptId}
                         showDate={false}
-                        onStatusChange={handleStatusChange}
-                        onRequestCancel={(item) => setCancelModal({ isOpen: true, appointment: item })}
                       />
                     ))}
                   </div>
@@ -1472,13 +1311,6 @@ export default function AdminDashboard() {
                     className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#182030] hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold cursor-pointer"
                   >
                     🖨 {copy.appointments.exportPdf}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleOpenWalkIn}
-                    className="min-h-[38px] px-4 py-1.5 rounded-xl bg-[#D9822B] hover:bg-[#e4903a] text-white text-xs font-bold cursor-pointer"
-                  >
-                    {copy.walkInCta}
                   </button>
                 </div>
               </div>
@@ -1594,10 +1426,7 @@ export default function AdminDashboard() {
                       appt={appt}
                       copy={copy}
                       isAr={isAr}
-                      updatingId={updatingApptId}
                       showDate
-                      onStatusChange={handleStatusChange}
-                      onRequestCancel={(item) => setCancelModal({ isOpen: true, appointment: item })}
                     />
                   ))}
                 </div>
@@ -1658,17 +1487,23 @@ export default function AdminDashboard() {
 
                       <div className="p-4 sm:p-5 space-y-2">
                         <div className="flex items-start justify-between gap-2">
-                          <h3 className="text-base font-bold text-white leading-snug">{srv.name}</h3>
+                          <h3 className="text-base font-bold text-white leading-snug">
+                            {isAr
+                              ? (srv.title_ar || srv.title_fr || srv.name)
+                              : (srv.title_fr || srv.title_ar || srv.name)}
+                          </h3>
                           <span className="text-base font-black font-mono text-[#D9822B] shrink-0">
                             {srv.price} {copy.common.currency}
                           </span>
                         </div>
                         <div className="text-xs font-mono text-slate-400">
-                          ⏱ {srv.duration} {copy.common.minutes}
+                          ⏱ {srv.duration_minutes || srv.duration} {copy.common.minutes}
                         </div>
-                        {srv.description && (
+                        {(srv.description_fr || srv.description_ar || srv.description) && (
                           <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
-                            {srv.description}
+                            {isAr
+                              ? (srv.description_ar || srv.description_fr || srv.description)
+                              : (srv.description_fr || srv.description_ar || srv.description)}
                           </p>
                         )}
                       </div>
@@ -1708,13 +1543,6 @@ export default function AdminDashboard() {
                   <h2 className="text-lg sm:text-xl font-bold text-white">{copy.teamTab.title}</h2>
                   <p className="text-xs text-slate-400 mt-0.5">{copy.teamTab.subtitle}</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setNewEmployeModal(true)}
-                  className="min-h-[42px] px-5 py-2 rounded-xl bg-[#D9822B] hover:bg-[#e4903a] text-white text-xs font-bold shadow cursor-pointer shrink-0"
-                >
-                  {copy.teamTab.addEmployeBtn}
-                </button>
               </div>
 
               {/* Barbers Profiles Grid */}
@@ -1821,19 +1649,25 @@ export default function AdminDashboard() {
                           </div>
                         </div>
 
-                        <select
-                          aria-label={copy.teamTab.syncRolesTitle}
-                          value={roleNames[0] || 'client'}
-                          disabled={updatingRoleUserId === u.id}
-                          onChange={(e) => handleSingleRoleChange(u, e.target.value)}
-                          className="min-h-[36px] px-3 py-1.5 rounded-xl bg-[#10151F] hover:bg-slate-800 border border-[#D9822B]/40 text-[#D9822B] text-base sm:text-xs font-bold shrink-0 cursor-pointer disabled:opacity-50 focus:outline-none focus:border-[#D9822B]"
-                        >
-                          {['client', 'employe', 'admin'].map((roleOption) => (
-                            <option key={roleOption} value={roleOption} className="bg-[#10151F] text-white">
-                              {copy.teamTab.roleLabels[roleOption]} ({roleOption})
-                            </option>
-                          ))}
-                        </select>
+                        {u.id === user?.id ? (
+                          <span className="min-h-[36px] px-3.5 py-1.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs font-bold shrink-0 inline-flex items-center gap-1.5">
+                            {isAr ? '🔒 المدير الرئيسي (أنت)' : '🔒 Admin Principal (Vous)'}
+                          </span>
+                        ) : (
+                          <select
+                            aria-label={copy.teamTab.syncRolesTitle}
+                            value={roleNames[0] || 'client'}
+                            disabled={updatingRoleUserId === u.id}
+                            onChange={(e) => handleSingleRoleChange(u, e.target.value)}
+                            className="min-h-[36px] px-3 py-1.5 rounded-xl bg-[#10151F] hover:bg-slate-800 border border-[#D9822B]/40 text-[#D9822B] text-base sm:text-xs font-bold shrink-0 cursor-pointer disabled:opacity-50 focus:outline-none focus:border-[#D9822B]"
+                          >
+                            {['client', 'employe', 'admin'].map((roleOption) => (
+                              <option key={roleOption} value={roleOption} className="bg-[#10151F] text-white">
+                                {copy.teamTab.roleLabels[roleOption]} ({roleOption})
+                              </option>
+                            ))}
+                          </select>
+                        )}
                       </div>
                     );
                   })}
@@ -1988,192 +1822,7 @@ export default function AdminDashboard() {
       {/* MODALS */}
       {/* ============================================================ */}
 
-      {/* 1. Walk-in / Manual Booking Modal */}
-      {walkInModalOpen && (
-        <div
-          dir={dir}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-        >
-          <form
-            onSubmit={handleSubmitWalkIn}
-            className="w-full max-w-lg rounded-2xl bg-[#182030] border border-slate-700 p-6 space-y-4 shadow-2xl text-start"
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-white">{copy.walkInModal.title}</h3>
-              <button
-                type="button"
-                onClick={() => setWalkInModalOpen(false)}
-                className="text-slate-400 hover:text-white px-2 py-1 cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setWalkInMode('guest')}
-                className={`min-h-[38px] rounded-xl text-xs font-bold border cursor-pointer ${
-                  walkInMode === 'guest'
-                    ? 'bg-[#D9822B]/20 border-[#D9822B] text-[#D9822B]'
-                    : 'bg-[#10151F] border-slate-700 text-slate-400'
-                }`}
-              >
-                {copy.walkInModal.walkInGuest}
-              </button>
-              <button
-                type="button"
-                onClick={() => setWalkInMode('existing')}
-                className={`min-h-[38px] rounded-xl text-xs font-bold border cursor-pointer ${
-                  walkInMode === 'existing'
-                    ? 'bg-[#D9822B]/20 border-[#D9822B] text-[#D9822B]'
-                    : 'bg-[#10151F] border-slate-700 text-slate-400'
-                }`}
-              >
-                {copy.walkInModal.existingClient}
-              </button>
-            </div>
-
-            {walkInMode === 'existing' ? (
-              <div>
-                <label className="block text-xs text-slate-300 mb-1">
-                  {copy.walkInModal.selectClient}
-                </label>
-                <select
-                  required
-                  value={walkInForm.client_id}
-                  onChange={(e) => setWalkInForm((p) => ({ ...p, client_id: e.target.value }))}
-                  className="w-full min-h-[42px] px-3 py-2 rounded-xl bg-[#10151F] border border-slate-700 text-white text-base sm:text-sm outline-none focus:border-[#D9822B]"
-                >
-                  <option value="">--</option>
-                  {clientUsers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} {c.phone ? `(${c.phone})` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-slate-300 mb-1">
-                    {copy.walkInModal.guestName}
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={walkInForm.client_name}
-                    onChange={(e) => setWalkInForm((p) => ({ ...p, client_name: e.target.value }))}
-                    className="w-full min-h-[42px] px-3 py-2 rounded-xl bg-[#10151F] border border-slate-700 text-white text-base sm:text-sm outline-none focus:border-[#D9822B]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-slate-300 mb-1">
-                    {copy.walkInModal.guestPhone}
-                  </label>
-                  <input
-                    type="tel"
-                    value={walkInForm.client_phone}
-                    onChange={(e) => setWalkInForm((p) => ({ ...p, client_phone: e.target.value }))}
-                    className="w-full min-h-[42px] px-3 py-2 rounded-xl bg-[#10151F] border border-slate-700 text-white text-base sm:text-sm outline-none focus:border-[#D9822B]"
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-slate-300 mb-1">
-                  {copy.walkInModal.selectBarber}
-                </label>
-                <select
-                  required
-                  value={walkInForm.barber_id}
-                  onChange={(e) => setWalkInForm((p) => ({ ...p, barber_id: e.target.value }))}
-                  className="w-full min-h-[42px] px-3 py-2 rounded-xl bg-[#10151F] border border-slate-700 text-white text-base sm:text-sm outline-none focus:border-[#D9822B]"
-                >
-                  {barbers.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-slate-300 mb-1">
-                  {copy.walkInModal.selectService}
-                </label>
-                <select
-                  required
-                  value={walkInForm.service_id}
-                  onChange={(e) => setWalkInForm((p) => ({ ...p, service_id: e.target.value }))}
-                  className="w-full min-h-[42px] px-3 py-2 rounded-xl bg-[#10151F] border border-slate-700 text-white text-base sm:text-sm outline-none focus:border-[#D9822B]"
-                >
-                  {services.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.price} {copy.common.currency})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-slate-300 mb-1">{copy.walkInModal.date}</label>
-                <input
-                  type="date"
-                  required
-                  value={walkInForm.appointment_date}
-                  onChange={(e) =>
-                    setWalkInForm((p) => ({ ...p, appointment_date: e.target.value }))
-                  }
-                  className="w-full min-h-[42px] px-3 py-2 rounded-xl bg-[#10151F] border border-slate-700 text-white text-base sm:text-sm outline-none focus:border-[#D9822B]"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-300 mb-1">{copy.walkInModal.time}</label>
-                <input
-                  type="time"
-                  required
-                  value={walkInForm.start_time}
-                  onChange={(e) => setWalkInForm((p) => ({ ...p, start_time: e.target.value }))}
-                  className="w-full min-h-[42px] px-3 py-2 rounded-xl bg-[#10151F] border border-slate-700 text-white text-base sm:text-sm outline-none focus:border-[#D9822B]"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs text-slate-300 mb-1">{copy.walkInModal.notes}</label>
-              <input
-                type="text"
-                value={walkInForm.notes}
-                onChange={(e) => setWalkInForm((p) => ({ ...p, notes: e.target.value }))}
-                className="w-full min-h-[42px] px-3 py-2 rounded-xl bg-[#10151F] border border-slate-700 text-white text-base sm:text-sm outline-none focus:border-[#D9822B]"
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setWalkInModalOpen(false)}
-                className="min-h-[42px] px-4 py-2 rounded-xl border border-slate-700 text-slate-300 text-xs font-semibold cursor-pointer"
-              >
-                {copy.actions.close}
-              </button>
-              <button
-                type="submit"
-                disabled={walkInSubmitting}
-                className="min-h-[42px] px-5 py-2 rounded-xl bg-[#D9822B] hover:bg-[#e4903a] text-white text-xs font-bold cursor-pointer disabled:opacity-50"
-              >
-                {walkInSubmitting ? copy.walkInModal.saving : copy.walkInModal.submit}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* 2. Service Add / Edit Modal */}
+      {/* 1. Service Add / Edit Modal (Bilingual FR / AR) */}
       {serviceModal.isOpen && (
         <div
           dir={dir}
@@ -2181,28 +1830,58 @@ export default function AdminDashboard() {
         >
           <form
             onSubmit={handleSaveService}
-            className="w-full max-w-md rounded-2xl bg-[#182030] border border-slate-700 p-6 space-y-4 shadow-2xl text-start"
+            className="w-full max-w-lg rounded-2xl bg-[#182030] border border-slate-700 p-6 space-y-4 shadow-2xl text-start"
           >
-            <h3 className="text-lg font-bold text-white">
-              {serviceModal.item ? copy.servicesTab.modalEdit : copy.servicesTab.modalAdd}
-            </h3>
-
-            <div>
-              <label className="block text-xs text-slate-300 mb-1">
-                {copy.servicesTab.nameLabel}
-              </label>
-              <input
-                type="text"
-                required
-                value={serviceForm.name}
-                onChange={(e) => setServiceForm((p) => ({ ...p, name: e.target.value }))}
-                className="w-full min-h-[42px] px-3 py-2 rounded-xl bg-[#10151F] border border-slate-700 text-white text-base sm:text-sm outline-none focus:border-[#D9822B]"
-              />
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-white">
+                {serviceModal.item ? copy.servicesTab.modalEdit : copy.servicesTab.modalAdd}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setServiceModal({ isOpen: false, item: null })}
+                className="text-slate-400 hover:text-white px-2 py-1 cursor-pointer"
+              >
+                ✕
+              </button>
             </div>
 
+            {/* Bilingual Titles: Titre (FR) & العنوان (AR) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {copy.servicesTab.titleFrLabel} <span className="text-[#D9822B]">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  dir="ltr"
+                  placeholder="ex: Coupe Signature Barberoza"
+                  value={serviceForm.title_fr}
+                  onChange={(e) => setServiceForm((p) => ({ ...p, title_fr: e.target.value }))}
+                  className="w-full min-h-[42px] px-3 py-2 rounded-xl bg-[#10151F] border border-slate-700 text-white text-base sm:text-sm outline-none focus:border-[#D9822B]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {copy.servicesTab.titleArLabel} <span className="text-[#D9822B]">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  dir="rtl"
+                  placeholder="مثال: حلاقة باربيروزا المتميزة"
+                  value={serviceForm.title_ar}
+                  onChange={(e) => setServiceForm((p) => ({ ...p, title_ar: e.target.value }))}
+                  className="w-full min-h-[42px] px-3 py-2 rounded-xl bg-[#10151F] border border-slate-700 text-white text-base sm:text-sm outline-none focus:border-[#D9822B]"
+                />
+              </div>
+            </div>
+
+            {/* Category, Duration & Price */}
             <div className="grid grid-cols-3 gap-3">
               <div className="col-span-3 sm:col-span-1">
-                <label className="block text-xs text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
                   {copy.servicesTab.categoryLabel}
                 </label>
                 <select
@@ -2218,7 +1897,7 @@ export default function AdminDashboard() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
                   {copy.servicesTab.durationLabel}
                 </label>
                 <input
@@ -2232,7 +1911,7 @@ export default function AdminDashboard() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
                   {copy.servicesTab.priceLabel}
                 </label>
                 <input
@@ -2247,18 +1926,37 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs text-slate-300 mb-1">
-                {copy.servicesTab.descLabel}
-              </label>
-              <textarea
-                rows={2}
-                value={serviceForm.description}
-                onChange={(e) => setServiceForm((p) => ({ ...p, description: e.target.value }))}
-                className="w-full px-3 py-2 rounded-xl bg-[#10151F] border border-slate-700 text-white text-base sm:text-sm outline-none focus:border-[#D9822B] resize-none"
-              />
+            {/* Bilingual Descriptions: Description (FR) & الوصف (AR) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {copy.servicesTab.descFrLabel}
+                </label>
+                <textarea
+                  rows={2}
+                  dir="ltr"
+                  placeholder="Description en français..."
+                  value={serviceForm.description_fr}
+                  onChange={(e) => setServiceForm((p) => ({ ...p, description_fr: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl bg-[#10151F] border border-slate-700 text-white text-base sm:text-sm outline-none focus:border-[#D9822B] resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {copy.servicesTab.descArLabel}
+                </label>
+                <textarea
+                  rows={2}
+                  dir="rtl"
+                  placeholder="الوصف بالعربية..."
+                  value={serviceForm.description_ar}
+                  onChange={(e) => setServiceForm((p) => ({ ...p, description_ar: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl bg-[#10151F] border border-slate-700 text-white text-base sm:text-sm outline-none focus:border-[#D9822B] resize-none"
+                />
+              </div>
             </div>
 
+            {/* Image URL & File */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs text-slate-300 mb-1">
@@ -2266,6 +1964,7 @@ export default function AdminDashboard() {
                 </label>
                 <input
                   type="text"
+                  placeholder="services/haircut.jpg"
                   value={serviceForm.image_url}
                   onChange={(e) => setServiceForm((p) => ({ ...p, image_url: e.target.value }))}
                   className="w-full min-h-[40px] px-3 py-1.5 rounded-xl bg-[#10151F] border border-slate-700 text-white text-base sm:text-sm outline-none focus:border-[#D9822B]"
@@ -2417,118 +2116,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* 4. New Employee (Barber) Modal */}
-      {newEmployeModal && (
-        <div
-          dir={dir}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-        >
-          <form
-            onSubmit={handleCreateEmploye}
-            className="w-full max-w-md rounded-2xl bg-[#182030] border border-slate-700 p-6 space-y-4 shadow-2xl text-start"
-          >
-            <h3 className="text-lg font-bold text-white">{copy.teamTab.newEmployeTitle}</h3>
-
-            <div>
-              <label className="block text-xs text-slate-300 mb-1">{copy.teamTab.fullName}</label>
-              <input
-                type="text"
-                required
-                value={newEmployeForm.name}
-                onChange={(e) => setNewEmployeForm((p) => ({ ...p, name: e.target.value }))}
-                className="w-full min-h-[42px] px-3 py-2 rounded-xl bg-[#10151F] border border-slate-700 text-white text-base sm:text-sm outline-none focus:border-[#D9822B]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs text-slate-300 mb-1">{copy.teamTab.email}</label>
-              <input
-                type="email"
-                required
-                value={newEmployeForm.email}
-                onChange={(e) => setNewEmployeForm((p) => ({ ...p, email: e.target.value }))}
-                className="w-full min-h-[42px] px-3 py-2 rounded-xl bg-[#10151F] border border-slate-700 text-white text-base sm:text-sm outline-none focus:border-[#D9822B]"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-slate-300 mb-1">{copy.teamTab.phone}</label>
-                <input
-                  type="tel"
-                  value={newEmployeForm.phone}
-                  onChange={(e) => setNewEmployeForm((p) => ({ ...p, phone: e.target.value }))}
-                  className="w-full min-h-[42px] px-3 py-2 rounded-xl bg-[#10151F] border border-slate-700 text-white text-base sm:text-sm outline-none focus:border-[#D9822B]"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-300 mb-1">{copy.teamTab.password}</label>
-                <input
-                  type="password"
-                  minLength={8}
-                  required
-                  value={newEmployeForm.password}
-                  onChange={(e) => setNewEmployeForm((p) => ({ ...p, password: e.target.value }))}
-                  className="w-full min-h-[42px] px-3 py-2 rounded-xl bg-[#10151F] border border-slate-700 text-white text-base sm:text-sm outline-none focus:border-[#D9822B]"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setNewEmployeModal(false)}
-                className="min-h-[40px] px-4 py-2 rounded-xl border border-slate-700 text-slate-300 text-xs font-semibold cursor-pointer"
-              >
-                {copy.actions.close}
-              </button>
-              <button
-                type="submit"
-                disabled={creatingEmploye}
-                className="min-h-[40px] px-5 py-2 rounded-xl bg-[#D9822B] hover:bg-[#e4903a] text-white text-xs font-bold cursor-pointer disabled:opacity-50"
-              >
-                {copy.actions.save}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* 6. Cancel Appointment Confirmation Modal */}
-      {cancelModal.isOpen && cancelModal.appointment && (
-        <div
-          dir={dir}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-        >
-          <div className="w-full max-w-md rounded-2xl bg-[#182030] border border-slate-700 p-6 space-y-4 shadow-2xl text-start">
-            <h3 className="text-lg font-bold text-white">{copy.actions.confirmCancelTitle}</h3>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              {copy.actions.confirmCancelDesc
-                .replace('{client}', cancelModal.appointment.client?.name || '')
-                .replace('{time}', cancelModal.appointment.start_time || '')}
-            </p>
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setCancelModal({ isOpen: false, appointment: null })}
-                className="min-h-[40px] px-4 py-2 rounded-xl border border-slate-700 text-slate-300 text-xs font-semibold cursor-pointer"
-              >
-                {copy.actions.close}
-              </button>
-              <button
-                type="button"
-                disabled={updatingApptId === cancelModal.appointment.id}
-                onClick={() => handleStatusChange(cancelModal.appointment.id, 'cancelled')}
-                className="min-h-[40px] px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
-              >
-                {copy.actions.cancel}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 7. Delete Service / Barber Confirmation Modal */}
+      {/* 3. Delete Service / Barber Confirmation Modal */}
       {deleteConfirm.isOpen && (
         <div
           dir={dir}

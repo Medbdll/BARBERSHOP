@@ -29,6 +29,14 @@ class AdminRoleController extends Controller
         $user = User::findOrFail($id);
         $newRole = $validated['role'];
 
+        // Prevent the Admin from changing their own role
+        if ($request->user() && $request->user()->id === $user->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Action interdite : vous ne pouvez pas modifier votre propre rôle.',
+            ], 403);
+        }
+
         // Prevent demoting the last active administrator
         if (
             $user->hasRole('admin') &&
@@ -46,31 +54,29 @@ class AdminRoleController extends Controller
 
         // Ensure bidirectional sync with barbers table
         if ($newRole === 'employe') {
+            $attributes = [
+                'name' => $user->name,
+                'specialty' => 'Maître Barbier & Styliste',
+                'experience' => '5 ans',
+                'rating' => 5.0,
+                'bio' => 'Professionnel dédié aux rituels de soins masculins et coiffures modernes.',
+                'image_url' => MediaUrl::toStoragePath($user->getRawOriginal('avatar'))
+                    ?: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400',
+                'is_active' => true,
+                'deleted_at' => null,
+            ];
+            if (Schema::hasColumn('barbers', 'photo')) {
+                $attributes['photo'] = $user->getRawOriginal('avatar');
+            }
+
             $barber = Barber::withTrashed()->where('user_id', $user->id)->first();
             if ($barber) {
                 if ($barber->trashed()) {
                     $barber->restore();
                 }
-                $barber->update([
-                    'name' => $user->name,
-                    'is_active' => true,
-                    'deleted_at' => null,
-                ]);
+                $barber->update($attributes);
             } else {
-                $attributes = [
-                    'name' => $user->name,
-                    'specialty' => 'Maître Barbier & Styliste',
-                    'experience' => '5 ans',
-                    'rating' => 5.0,
-                    'bio' => 'Professionnel dédié aux rituels de soins masculins et coiffures modernes.',
-                    'image_url' => MediaUrl::toStoragePath($user->getRawOriginal('avatar'))
-                        ?: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400',
-                    'is_active' => true,
-                ];
-                if (Schema::hasColumn('barbers', 'photo')) {
-                    $attributes['photo'] = $user->getRawOriginal('avatar');
-                }
-                Barber::firstOrCreate(['user_id' => $user->id], $attributes);
+                Barber::updateOrCreate(['user_id' => $user->id], $attributes);
             }
         } else {
             // Role changed FROM employe TO client or admin -> cancel future pending & deactivate/delete barber

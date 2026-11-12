@@ -33,8 +33,12 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        // Assign 'client' role by default
-        $user->assignRole('client');
+        // First registered user = permanent admin, subsequent users = client
+        if (User::count() === 1) {
+            $user->syncRoles(['admin']);
+        } else {
+            $user->syncRoles(['client']);
+        }
 
         $token = $user->createToken('auth-token')->plainTextToken;
 

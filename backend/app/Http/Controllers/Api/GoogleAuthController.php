@@ -99,9 +99,13 @@ class GoogleAuthController extends Controller
                     $user->save();
                 }
 
-                // If user has no roles, assign client
+                // If user has no roles, assign admin if first user or client otherwise
                 if ($user->roles()->count() === 0) {
-                    $user->assignRole('client');
+                    if (User::count() === 1) {
+                        $user->syncRoles(['admin']);
+                    } else {
+                        $user->syncRoles(['client']);
+                    }
                 }
             } else {
                 // Create a new User
@@ -118,8 +122,12 @@ class GoogleAuthController extends Controller
                     'email_verified_at' => now(),
                 ]);
 
-                // Automatically assign Spatie client role
-                $user->assignRole('client');
+                // First registered user = permanent admin, subsequent users = client
+                if (User::count() === 1) {
+                    $user->syncRoles(['admin']);
+                } else {
+                    $user->syncRoles(['client']);
+                }
             }
 
             // Check if $user->status === 'blocked' and reject login if blocked

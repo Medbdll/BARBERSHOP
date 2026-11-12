@@ -30,6 +30,13 @@ class AppointmentController extends Controller
     {
         $user = $request->user();
 
+        if (! $user || ! $user->hasRole('client')) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Réservations réservées exclusivement aux comptes clients.',
+            ], 403);
+        }
+
         // Harmonize single service_id vs multiple service_ids
         $serviceIds = [];
         if ($request->has('service_ids') && is_array($request->service_ids)) {
