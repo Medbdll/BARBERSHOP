@@ -1,5 +1,19 @@
 import React, { useState } from 'react';
 import { servicesData as fallbackServices } from '../../data/barberShopData';
+import {
+  getImageUrl,
+  handleImageFallbackError,
+} from '../../utils/getImageUrl';
+
+// Per-category fallback image (Unsplash, barbershop-themed)
+const CATEGORY_FALLBACKS = {
+  hair:  'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?auto=format&fit=crop&q=80&w=600',
+  beard: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&q=80&w=600',
+  care:  'https://images.unsplash.com/photo-1512690459411-b9245aed614b?auto=format&fit=crop&q=80&w=600',
+  vip:   'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?auto=format&fit=crop&q=80&w=600',
+};
+
+const CATEGORY_ICONS = { hair: '✂️', beard: '🪒', care: '🌿', vip: '👑' };
 
 export default function ServicesSection({
   lang,
@@ -63,13 +77,16 @@ export default function ServicesSection({
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-pulse">
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-            <div key={i} className="rounded-2xl p-6 bg-gray-900/50 border border-gray-800 h-64 flex flex-col justify-between">
-              <div className="space-y-3">
-                <div className="h-5 bg-gray-800 rounded w-3/4"></div>
-                <div className="h-3 bg-gray-800/60 rounded w-full"></div>
-                <div className="h-3 bg-gray-800/60 rounded w-2/3"></div>
+            <div key={i} className="rounded-2xl bg-gray-900/50 border border-gray-800 overflow-hidden flex flex-col">
+              <div className="h-40 bg-gray-800 w-full" />
+              <div className="p-5 space-y-3 flex-1 flex flex-col justify-between">
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-800 rounded w-3/4" />
+                  <div className="h-3 bg-gray-800/60 rounded w-full" />
+                  <div className="h-3 bg-gray-800/60 rounded w-2/3" />
+                </div>
+                <div className="h-8 bg-gray-800 rounded mt-4" />
               </div>
-              <div className="h-8 bg-gray-800 rounded"></div>
             </div>
           ))}
         </div>
@@ -83,10 +100,13 @@ export default function ServicesSection({
             const formattedDuration = `${rawDuration} ${t.common?.minutes || 'min'}`;
             const currencyLabel = t.common?.currency || 'MAD';
 
+            const categoryFallback = CATEGORY_FALLBACKS[service.category] || CATEGORY_FALLBACKS.hair;
+            const imageUrl = getImageUrl(service.image_url, categoryFallback);
+
             return (
               <div
                 key={service.id}
-                className={`rounded-2xl p-6 flex flex-col justify-between transition-all duration-300 relative group ${
+                className={`rounded-2xl flex flex-col justify-between transition-all duration-300 relative group overflow-hidden ${
                   isSelected
                     ? 'bg-gray-900 border-2 border-amber-500 shadow-xl shadow-amber-500/10'
                     : 'bg-gray-900/60 hover:bg-gray-900/90 border border-gray-800 hover:border-amber-500/40 shadow-lg'
@@ -94,57 +114,72 @@ export default function ServicesSection({
               >
                 {/* Popular or Recommended badge */}
                 {(service.popular || service.category === 'vip') && (
-                  <div className="absolute -top-3 right-4 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-gray-950 text-[10px] font-black uppercase tracking-wider shadow">
+                  <div className="absolute top-3 right-3 z-10 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-gray-950 text-[10px] font-black uppercase tracking-wider shadow">
                     {t.common?.prestige || 'Prestige'}
                   </div>
                 )}
 
-                {/* Service Info */}
-                <div>
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <h3 className="font-bold text-white text-base leading-snug group-hover:text-amber-300 transition-colors">
-                      {name}
-                    </h3>
-                  </div>
-
-                  <p className="text-xs text-gray-400 line-clamp-3 mb-4 leading-relaxed">
-                    {desc}
-                  </p>
+                {/* Service Image */}
+                <div className="relative w-full h-40 overflow-hidden bg-gray-800 shrink-0">
+                  <img
+                    src={imageUrl}
+                    alt={name}
+                    loading="lazy"
+                    decoding="async"
+                    onError={(e) => handleImageFallbackError(e, categoryFallback)}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  {/* Dark gradient overlay at bottom for text readability */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/30 to-transparent" />
+                 
+        
                 </div>
 
-                {/* Footer: Duration, Price in MAD, Select CTA */}
-                <div className="pt-4 border-t border-gray-800/80 space-y-3">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="flex items-center gap-1.5 text-gray-400 font-medium">
-                      <span>⏱</span>
-                      <span>{formattedDuration}</span>
-                    </span>
-
-                    <div className="text-right">
-                      <span className="text-lg font-black text-amber-400 font-mono">
-                        {service.price}
-                      </span>{' '}
-                      <span className="text-xs font-bold text-amber-500/80">
-                        {currencyLabel}
-                      </span>
-                    </div>
+                {/* Service Info */}
+                <div className="p-5 flex flex-col flex-1 justify-between">
+                  <div>
+                    <h3 className="font-bold text-white text-base leading-snug group-hover:text-amber-300 transition-colors mb-2">
+                      {name}
+                    </h3>
+                    <p className="text-xs text-gray-400 line-clamp-3 leading-relaxed">
+                      {desc}
+                    </p>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => onSelectService(service)}
-                    className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 ${
-                      isSelected
-                        ? 'bg-emerald-500 text-gray-950 shadow-md shadow-emerald-500/20'
-                        : 'bg-gray-800 hover:bg-amber-500 text-gray-200 hover:text-gray-950 border border-gray-700 hover:border-amber-500 shadow'
-                    }`}
-                  >
-                    {isSelected ? (
-                      <span>{t.services.selectedBtn}</span>
-                    ) : (
-                      <span>{t.services.selectBtn}</span>
-                    )}
-                  </button>
+                  {/* Footer: Duration, Price in MAD, Select CTA */}
+                  <div className="pt-4 border-t border-gray-800/80 space-y-3 mt-4">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="flex items-center gap-1.5 text-gray-400 font-medium">
+                        <span>⏱</span>
+                        <span>{formattedDuration}</span>
+                      </span>
+
+                      <div className="text-right">
+                        <span className="text-lg font-black text-amber-400 font-mono">
+                          {service.price}
+                        </span>{' '}
+                        <span className="text-xs font-bold text-amber-500/80">
+                          {currencyLabel}
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => onSelectService(service)}
+                      className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 ${
+                        isSelected
+                          ? 'bg-emerald-500 text-gray-950 shadow-md shadow-emerald-500/20'
+                          : 'bg-gray-800 hover:bg-amber-500 text-gray-200 hover:text-gray-950 border border-gray-700 hover:border-amber-500 shadow'
+                      }`}
+                    >
+                      {isSelected ? (
+                        <span>{t.services.selectedBtn}</span>
+                      ) : (
+                        <span>{t.services.selectBtn}</span>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             );
