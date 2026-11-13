@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AdminApiController;
+use App\Http\Controllers\Api\AdminReviewController;
 use App\Http\Controllers\Api\AdminRoleController;
 use App\Http\Controllers\Api\AppointmentController;
 use App\Http\Controllers\Api\AuthController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\Api\EmployeScheduleController;
 use App\Http\Controllers\Api\GoogleAuthController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\PublicApiController;
+use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\ServiceController;
 use Illuminate\Support\Facades\Route;
 
@@ -27,6 +29,7 @@ Route::get('/services', [PublicApiController::class, 'services']);
 Route::get('/barbers', [PublicApiController::class, 'barbers']);
 Route::get('/available-slots', [PublicApiController::class, 'availableSlots']);
 Route::get('/reviews', [PublicApiController::class, 'reviews']);
+Route::get('/reviews/public', [ReviewController::class, 'publicIndex']);
 Route::get('/gallery', [PublicApiController::class, 'gallery']);
 
 // Authentication Routes
@@ -49,6 +52,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar']);
     Route::get('/user', [AuthController::class, 'me']); // Backward compatibility
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/reviews', [ReviewController::class, 'store']);
 });
 
 // ========================================================
@@ -139,6 +143,9 @@ Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(functi
     Route::patch('/users/{id}/role', [AdminRoleController::class, 'updateUserRole']);
     Route::post('/users/{id}/role', [AdminRoleController::class, 'updateUserRole']);
 
-    // Reviews Moderation
+    // Reviews Moderation (Full CRUD)
+    Route::get('/reviews', [AdminReviewController::class, 'index']);
+    Route::patch('/reviews/{review}/status', [AdminReviewController::class, 'updateStatus']);
+    Route::delete('/reviews/{review}', [AdminReviewController::class, 'destroy']);
     Route::patch('/reviews/{id}/approve', [AdminApiController::class, 'approveReview']);
 });

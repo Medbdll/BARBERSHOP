@@ -1,5 +1,4 @@
 import React from 'react';
-import { testimonialsData as fallbackReviews } from '../../data/barberShopData';
 import { GoldStarIcon } from '../auth/AuthIcons';
 import { getImageUrl, handleImageFallbackError } from '../../utils/getImageUrl';
 
@@ -9,7 +8,7 @@ export default function TestimonialsSection({
   reviews = [],
   loading = false,
 }) {
-  const sourceReviews = reviews && reviews.length > 0 ? reviews : fallbackReviews;
+  const sourceReviews = Array.isArray(reviews) ? reviews : [];
 
   return (
     <section id="testimonials" className="py-24 px-4 sm:px-6 lg:px-8 bg-gray-950/70 border-t border-gray-800/80">
@@ -46,6 +45,10 @@ export default function TestimonialsSection({
                 </div>
               </div>
             ))}
+          </div>
+        ) : sourceReviews.length === 0 ? (
+          <div className="text-center py-12 text-gray-400 text-sm">
+            {lang === 'ar' ? 'لا توجد آراء منشورة حالياً.' : 'Aucun avis publié pour le moment.'}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">

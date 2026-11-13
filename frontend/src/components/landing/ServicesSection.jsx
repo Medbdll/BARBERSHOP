@@ -1,19 +1,8 @@
 import React, { useState } from 'react';
-import { servicesData as fallbackServices } from '../../data/barberShopData';
 import {
   getImageUrl,
   handleImageFallbackError,
 } from '../../utils/getImageUrl';
-
-// Per-category fallback image (Unsplash, barbershop-themed)
-const CATEGORY_FALLBACKS = {
-  hair:  'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?auto=format&fit=crop&q=80&w=600',
-  beard: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&q=80&w=600',
-  care:  'https://images.unsplash.com/photo-1512690459411-b9245aed614b?auto=format&fit=crop&q=80&w=600',
-  vip:   'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?auto=format&fit=crop&q=80&w=600',
-};
-
-const CATEGORY_ICONS = { hair: '✂️', beard: '🪒', care: '🌿', vip: '👑' };
 
 export default function ServicesSection({
   lang,
@@ -33,7 +22,7 @@ export default function ServicesSection({
     { key: 'vip', label: t.services.filterVip },
   ];
 
-  const sourceData = services && services.length > 0 ? services : fallbackServices;
+  const sourceData = Array.isArray(services) ? services : [];
 
   const filteredServices =
     activeCategory === 'all'
@@ -90,6 +79,10 @@ export default function ServicesSection({
             </div>
           ))}
         </div>
+      ) : filteredServices.length === 0 ? (
+        <div className="text-center py-12 text-gray-400 text-sm">
+          {lang === 'ar' ? 'لا توجد خدمات متاحة في هذا القسم.' : 'Aucune prestation disponible dans cette catégorie.'}
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredServices.map((service) => {
@@ -100,8 +93,7 @@ export default function ServicesSection({
             const formattedDuration = `${rawDuration} ${t.common?.minutes || 'min'}`;
             const currencyLabel = t.common?.currency || 'MAD';
 
-            const categoryFallback = CATEGORY_FALLBACKS[service.category] || CATEGORY_FALLBACKS.hair;
-            const imageUrl = getImageUrl(service.image_url, categoryFallback);
+            const imageUrl = getImageUrl(service.image_url);
 
             return (
               <div

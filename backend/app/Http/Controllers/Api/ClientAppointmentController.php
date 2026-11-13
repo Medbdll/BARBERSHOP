@@ -302,10 +302,12 @@ class ClientAppointmentController extends Controller
 
         $review = Review::create([
             'appointment_id' => $request->appointment_id,
+            'user_id' => $user->id,
             'client_id' => $user->id,
             'barber_id' => $request->barber_id,
             'rating' => $request->rating,
             'comment' => $request->comment,
+            'status' => 'pending',
             'is_approved' => false, // Requires admin moderation
         ]);
 

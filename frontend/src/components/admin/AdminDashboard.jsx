@@ -24,6 +24,9 @@ import {
   getAdminUsers,
   toggleAdminUserStatus,
   updateUserRole,
+  getAdminReviews,
+  updateAdminReviewStatus,
+  deleteAdminReview,
 } from '../../api/barberApi';
 
 const ADMIN_COPY = {
@@ -43,6 +46,7 @@ const ADMIN_COPY = {
       services: 'Prestations',
       team: 'Équipe & Rôles',
       clients: 'Clients',
+      reviews: 'Avis Clients',
     },
     kpis: {
       todayBookings: 'RDV du Jour',
@@ -163,6 +167,25 @@ const ADMIN_COPY = {
       unblockBtn: 'Débloquer',
       empty: 'Aucun client correspondant.',
     },
+    reviewsTab: {
+      title: 'Modération des Avis Clients',
+      subtitle: 'Approuvez ou rejetez les avis avant publication sur la Landing Page.',
+      filterAll: 'Tous',
+      filterPending: 'En attente',
+      filterApproved: 'Approuvés',
+      filterRejected: 'Rejetés',
+      approveBtn: '✓ Approuver',
+      rejectBtn: '✕ Rejeter',
+      pendingBtn: '↩ En attente',
+      deleteBtn: 'Supprimer',
+      pendingBadge: 'En attente',
+      approvedBadge: 'Approuvé',
+      rejectedBadge: 'Rejeté',
+      empty: 'Aucun avis pour ce filtre.',
+      stars: 'étoiles',
+      by: 'par',
+      confirmDelete: 'Supprimer définitivement cet avis client ?',
+    },
     walkInModal: {
       title: 'Nouveau RDV Manuel (Walk-in)',
       existingClient: 'Client existant',
@@ -199,6 +222,7 @@ const ADMIN_COPY = {
       services: 'الخدمات',
       team: 'الفريق والأدوار',
       clients: 'الزبناء',
+      reviews: 'تقييمات الزبناء',
     },
     kpis: {
       todayBookings: 'مواعيد اليوم',
@@ -318,6 +342,25 @@ const ADMIN_COPY = {
       blockBtn: 'حظر',
       unblockBtn: 'إلغاء الحظر',
       empty: 'لا يوجد زبناء مطابقون.',
+    },
+    reviewsTab: {
+      title: 'مراجعة وإدارة التقييمات',
+      subtitle: 'وافق على التقييمات أو ارفضها قبل نشرها في الصفحة الرئيسية.',
+      filterAll: 'الكل',
+      filterPending: 'قيد المراجعة',
+      filterApproved: 'مقبولة',
+      filterRejected: 'مرفوضة',
+      approveBtn: '✓ قبول',
+      rejectBtn: '✕ رفض',
+      pendingBtn: '↩ قيد المراجعة',
+      deleteBtn: 'حذف',
+      pendingBadge: 'قيد المراجعة',
+      approvedBadge: 'مقبول',
+      rejectedBadge: 'مرفوض',
+      empty: 'لا توجد تقييمات لهذا الفلتر.',
+      stars: 'نجوم',
+      by: 'بواسطة',
+      confirmDelete: 'هل تريد حذف هذا التقييم نهائياً؟',
     },
     walkInModal: {
       title: 'حجز يدوي جديد (Walk-in)',
@@ -453,7 +496,7 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
 
   const todayStr = getTodayDateString();
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'appointments' | 'services' | 'team' | 'clients'
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'appointments' | 'services' | 'team' | 'clients' | 'reviews'
 
   // Core Data State
   const [stats, setStats] = useState(null);
@@ -474,6 +517,14 @@ export default function AdminDashboard() {
   // Clients Tab Search
   const [clientSearch, setClientSearch] = useState('');
   const [togglingUserId, setTogglingUserId] = useState(null);
+
+  // Reviews Moderation State
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewCounts, setReviewCounts] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
+  const [reviewStatusFilter, setReviewStatusFilter] = useState('all');
+  const [updatingReviewId, setUpdatingReviewId] = useState(null);
+  const [reviewDeleteConfirm, setReviewDeleteConfirm] = useState(null);
 
   const [serviceModal, setServiceModal] = useState({ isOpen: false, item: null });
   const [serviceSaving, setServiceSaving] = useState(false);
@@ -523,23 +574,39 @@ export default function AdminDashboard() {
     };
   }, []);
 
-  // Load KPIs, Today's queue, Services, Barbers, Users
+  // Load KPIs, Today's queue, Services, Barbers, Users, Reviews
   const loadDashboardCatalogs = useCallback(async () => {
     try {
-      const [statsRes, todayRes, srvRes, brbRes, usrRes] = await Promise.all([
+      const [statsRes, todayRes, srvRes, brbRes, usrRes, revRes] = await Promise.all([
         getAdminStats(),
         getAdminAppointments({ date: 'today', per_page: 50 }),
         getAdminServices(),
         getAdminBarbers(),
         getAdminUsers({ per_page: 100 }),
+        getAdminReviews(),
       ]);
       setStats(statsRes || null);
       setTodayQueue(Array.isArray(todayRes?.data) ? todayRes.data : []);
       setServices(Array.isArray(srvRes?.data) ? srvRes.data : []);
       setBarbers(Array.isArray(brbRes?.data) ? brbRes.data : []);
       setUsersList(Array.isArray(usrRes?.data) ? usrRes.data : []);
+      if (Array.isArray(revRes?.data)) setReviews(revRes.data);
+      if (revRes?.counts) setReviewCounts(revRes.counts);
     } catch (err) {
       console.error('Admin dashboard load warning:', err);
+    }
+  }, []);
+
+  const loadReviews = useCallback(async () => {
+    setReviewsLoading(true);
+    try {
+      const res = await getAdminReviews();
+      setReviews(Array.isArray(res?.data) ? res.data : []);
+      if (res?.counts) setReviewCounts(res.counts);
+    } catch (err) {
+      console.error('Reviews load error:', err);
+    } finally {
+      setReviewsLoading(false);
     }
   }, []);
 
@@ -571,14 +638,17 @@ export default function AdminDashboard() {
       getAdminServices(),
       getAdminBarbers(),
       getAdminUsers({ per_page: 100 }),
+      getAdminReviews(),
     ])
-      .then(([statsRes, todayRes, srvRes, brbRes, usrRes]) => {
+      .then(([statsRes, todayRes, srvRes, brbRes, usrRes, revRes]) => {
         if (cancelled) return;
         setStats(statsRes || null);
         setTodayQueue(Array.isArray(todayRes?.data) ? todayRes.data : []);
         setServices(Array.isArray(srvRes?.data) ? srvRes.data : []);
         setBarbers(Array.isArray(brbRes?.data) ? brbRes.data : []);
         setUsersList(Array.isArray(usrRes?.data) ? usrRes.data : []);
+        if (Array.isArray(revRes?.data)) setReviews(revRes.data);
+        if (revRes?.counts) setReviewCounts(revRes.counts);
       })
       .catch(() => {});
 
@@ -593,6 +663,12 @@ export default function AdminDashboard() {
       clearInterval(interval);
     };
   }, [loadDashboardCatalogs]);
+
+  useEffect(() => {
+    if (activeTab === 'reviews') {
+      loadReviews();
+    }
+  }, [activeTab, loadReviews]);
 
   // Reload Tab 2 appointments on filter change
   useEffect(() => {
@@ -872,6 +948,59 @@ export default function AdminDashboard() {
     }
   };
 
+  // Reviews Moderation Handlers
+  const handleReviewStatus = async (reviewId, newStatus) => {
+    setUpdatingReviewId(reviewId);
+    try {
+      await updateAdminReviewStatus(reviewId, newStatus);
+      setReviews((prev) =>
+        prev.map((r) => (r.id === reviewId ? { ...r, status: newStatus, is_approved: newStatus === 'approved' } : r))
+      );
+      setReviewCounts((prev) => {
+        const currentRev = reviews.find((r) => r.id === reviewId);
+        const oldStatus = currentRev?.status || (currentRev?.is_approved ? 'approved' : 'pending');
+        if (oldStatus === newStatus) return prev;
+        return {
+          ...prev,
+          [oldStatus]: Math.max(0, (prev[oldStatus] || 0) - 1),
+          [newStatus]: (prev[newStatus] || 0) + 1,
+        };
+      });
+      showToast(
+        newStatus === 'approved'
+          ? (isAr ? 'تم قبول التقييم ونشره.' : 'Avis approuvé et publié.')
+          : newStatus === 'rejected'
+            ? (isAr ? 'تم رفض التقييم.' : 'Avis rejeté.')
+            : (isAr ? 'تم إعادة التقييم لقيد المراجعة.' : 'Avis remis en attente.')
+      );
+    } catch (err) {
+      showToast(err?.response?.data?.message || 'Erreur statut avis.', 'error');
+    } finally {
+      setUpdatingReviewId(null);
+    }
+  };
+
+  const handleDeleteReview = async (reviewId) => {
+    setUpdatingReviewId(reviewId);
+    try {
+      await deleteAdminReview(reviewId);
+      const targetRev = reviews.find((r) => r.id === reviewId);
+      const currentSt = targetRev?.status || (targetRev?.is_approved ? 'approved' : 'pending');
+      setReviews((prev) => prev.filter((r) => r.id !== reviewId));
+      setReviewCounts((prev) => ({
+        ...prev,
+        total: Math.max(0, (prev.total || 0) - 1),
+        [currentSt]: Math.max(0, (prev[currentSt] || 0) - 1),
+      }));
+      showToast(isAr ? 'تم حذف التقييم نهائياً.' : 'Avis supprimé définitivement.');
+    } catch (err) {
+      showToast(err?.response?.data?.message || 'Erreur suppression avis.', 'error');
+    } finally {
+      setUpdatingReviewId(null);
+      setReviewDeleteConfirm(null);
+    }
+  };
+
   const handleLogout = async () => {
     await logout();
     navigate('/login', { replace: true });
@@ -907,6 +1036,8 @@ export default function AdminDashboard() {
     () => todayQueue.filter((a) => ['pending', 'confirmed', 'in_progress'].includes(a.status)).length,
     [todayQueue]
   );
+
+  const pendingReviewsCount = useMemo(() => reviewCounts.pending || 0, [reviewCounts]);
 
   const navItems = useMemo(
     () => [
@@ -960,8 +1091,18 @@ export default function AdminDashboard() {
           </svg>
         ),
       },
+      {
+        id: 'reviews',
+        label: copy.nav.reviews,
+        badge: pendingReviewsCount > 0 ? pendingReviewsCount : null,
+        icon: (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+          </svg>
+        ),
+      },
     ],
-    [copy.nav, pendingOrConfirmedCount]
+    [copy.nav, pendingOrConfirmedCount, pendingReviewsCount]
   );
 
   // Analytics datasets for Overview progress bars
@@ -1677,6 +1818,256 @@ export default function AdminDashboard() {
           )}
 
           {/* ============================================================ */}
+          {/* TAB 6: REVIEWS MODERATION */}
+          {/* ============================================================ */}
+          {activeTab === 'reviews' && (
+            <section className="space-y-5">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                    <span>{copy.reviewsTab.title}</span>
+                    {reviewsLoading && (
+                      <span className="w-4 h-4 border-2 border-[#D9822B]/30 border-t-[#D9822B] rounded-full animate-spin" />
+                    )}
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">{copy.reviewsTab.subtitle}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={loadReviews}
+                  className="min-h-[38px] px-4 py-2 rounded-xl bg-[#182030] hover:bg-slate-800 border border-[#D9822B]/40 text-[#D9822B] text-xs font-bold transition cursor-pointer shrink-0"
+                >
+                  ↻ {copy.refreshBtn}
+                </button>
+              </div>
+
+              {/* Status Count Summary Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { key: 'all', countKey: 'total', label: copy.reviewsTab.filterAll, color: 'text-white', bg: 'bg-[#182030] border-slate-800' },
+                  { key: 'pending', countKey: 'pending', label: copy.reviewsTab.filterPending, color: 'text-amber-300', bg: 'bg-amber-500/10 border-amber-500/30' },
+                  { key: 'approved', countKey: 'approved', label: copy.reviewsTab.filterApproved, color: 'text-emerald-300', bg: 'bg-emerald-500/10 border-emerald-500/30' },
+                  { key: 'rejected', countKey: 'rejected', label: copy.reviewsTab.filterRejected, color: 'text-red-300', bg: 'bg-red-500/10 border-red-500/30' },
+                ].map(({ key, countKey, label, color, bg }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setReviewStatusFilter(key)}
+                    className={`p-3 sm:p-4 rounded-2xl border text-start transition cursor-pointer ${bg} ${
+                      reviewStatusFilter === key ? 'ring-2 ring-[#D9822B]/80 shadow-lg' : 'hover:border-slate-700'
+                    }`}
+                  >
+                    <div className={`text-2xl sm:text-3xl font-black font-mono ${color}`}>
+                      {reviewCounts[countKey] ?? 0}
+                    </div>
+                    <div className="text-[11px] text-slate-400 font-semibold mt-1 truncate">{label}</div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Filter Pills */}
+              <div className="flex flex-wrap items-center gap-2">
+                {[
+                  { key: 'all', label: copy.reviewsTab.filterAll },
+                  { key: 'pending', label: copy.reviewsTab.filterPending },
+                  { key: 'approved', label: copy.reviewsTab.filterApproved },
+                  { key: 'rejected', label: copy.reviewsTab.filterRejected },
+                ].map(({ key, label }) => {
+                  const active = reviewStatusFilter === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setReviewStatusFilter(key)}
+                      className={`min-h-[34px] px-3.5 py-1 rounded-full text-xs font-bold border transition cursor-pointer ${
+                        active
+                          ? 'bg-[#D9822B]/20 border-[#D9822B] text-[#D9822B]'
+                          : 'bg-[#10151F] border-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Review Cards List */}
+              {(() => {
+                const filtered =
+                  reviewStatusFilter === 'all'
+                    ? reviews
+                    : reviews.filter((r) => {
+                        const st = r.status || (r.is_approved ? 'approved' : 'pending');
+                        return st === reviewStatusFilter;
+                      });
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="p-10 text-center rounded-2xl bg-[#182030] border border-slate-800 text-xs text-slate-400">
+                      {copy.reviewsTab.empty}
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-4">
+                    {filtered.map((review) => {
+                      const stars = Number(review.rating) || 0;
+                      const avatarUrl = getImageUrl(
+                        review.client_avatar || review.client?.avatar || review.user?.avatar || review.client?.profile_photo_path,
+                        DEFAULT_AVATAR_PLACEHOLDER
+                      );
+                      const statusStyles = {
+                        pending: 'bg-amber-500/15 text-amber-300 border-amber-500/35',
+                        approved: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+                        rejected: 'bg-red-500/15 text-red-400 border-red-500/30',
+                      };
+                      const statusLabels = {
+                        pending: copy.reviewsTab.pendingBadge,
+                        approved: copy.reviewsTab.approvedBadge,
+                        rejected: copy.reviewsTab.rejectedBadge,
+                      };
+                      const reviewStatus = review.status || (review.is_approved ? 'approved' : 'pending');
+                      const isBusy = updatingReviewId === review.id;
+
+                      return (
+                        <article
+                          key={review.id}
+                          className="bg-[#182030] border border-white/10 rounded-2xl p-5 space-y-4 shadow-lg hover:border-[#D9822B]/30 transition"
+                        >
+                          {/* Top Row: Client Avatar + Name + Barber + Status Badge */}
+                          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                            <div className="flex items-start gap-3 min-w-0">
+                              <img
+                                src={avatarUrl}
+                                alt={review.client_name || review.user?.name || 'Client'}
+                                onError={(e) => handleImageFallbackError(e, DEFAULT_AVATAR_PLACEHOLDER)}
+                                className="w-11 h-11 rounded-full object-cover border border-[#D9822B]/40 shrink-0"
+                              />
+                              <div className="min-w-0 space-y-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <h3 className="text-sm sm:text-base font-bold text-white truncate">
+                                    {review.client_name || review.user?.name || (isAr ? 'زبون' : 'Client')}
+                                  </h3>
+                                  {review.city && (
+                                    <span className="px-2 py-0.5 rounded bg-[#10151F] border border-slate-800 text-[11px] text-slate-300">
+                                      📍 {review.city}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                                  {review.barber_name && (
+                                    <span className="px-2 py-0.5 rounded-md bg-[#10151F] border border-slate-800 text-slate-200 font-semibold">
+                                      💈 {review.barber_name}
+                                    </span>
+                                  )}
+                                  {review.service_used && (
+                                    <span className="px-2 py-0.5 rounded-md bg-[#D9822B]/15 border border-[#D9822B]/35 text-[#D9822B] font-semibold">
+                                      ✂️ {review.service_used}
+                                    </span>
+                                  )}
+                                  <span className="font-mono text-[11px] text-slate-500">
+                                    {review.created_at}
+                                  </span>
+                                </div>
+
+                                {/* Star Rating */}
+                                <div className="flex items-center gap-1 pt-1">
+                                  {[1, 2, 3, 4, 5].map((s) => (
+                                    <span
+                                      key={s}
+                                      className={`text-base leading-none select-none ${
+                                        s <= stars ? 'text-[#D9822B]' : 'text-slate-700'
+                                      }`}
+                                    >
+                                      ★
+                                    </span>
+                                  ))}
+                                  <span className="text-xs font-mono font-bold text-slate-400 ms-1.5">
+                                    {stars}/5
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Current Status Badge */}
+                            <span
+                              className={`inline-flex items-center self-start px-3 py-1 rounded-full text-xs font-bold border shrink-0 ${
+                                statusStyles[reviewStatus] || statusStyles.pending
+                              }`}
+                            >
+                              {statusLabels[reviewStatus] || reviewStatus}
+                            </span>
+                          </div>
+
+                          {/* Review Comment Text */}
+                          <div className="p-3.5 rounded-xl bg-[#10151F] border border-slate-800/80 space-y-2">
+                            <p className="text-sm text-slate-200 leading-relaxed italic">
+                              "{review.comment}"
+                            </p>
+                            {review.comment_ar && review.comment_ar !== review.comment && (
+                              <p dir="rtl" className="text-sm text-slate-300 leading-relaxed border-t border-slate-800/80 pt-2 font-arabic">
+                                "{review.comment_ar}"
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Moderation Actions Bar */}
+                          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-800/80">
+                            {reviewStatus !== 'approved' && (
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() => handleReviewStatus(review.id, 'approved')}
+                                className="min-h-[36px] px-4 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#10151F] text-xs font-bold transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow"
+                              >
+                                {isBusy && <span className="w-3 h-3 border-2 border-[#10151F]/30 border-t-[#10151F] rounded-full animate-spin" />}
+                                <span>{copy.reviewsTab.approveBtn}</span>
+                              </button>
+                            )}
+
+                            {reviewStatus !== 'rejected' && (
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() => handleReviewStatus(review.id, 'rejected')}
+                                className="min-h-[36px] px-4 py-1.5 rounded-xl border border-amber-500/40 hover:bg-amber-500/10 text-amber-400 text-xs font-bold transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                              >
+                                <span>{copy.reviewsTab.rejectBtn}</span>
+                              </button>
+                            )}
+
+                            {reviewStatus !== 'pending' && (
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() => handleReviewStatus(review.id, 'pending')}
+                                className="min-h-[36px] px-3.5 py-1.5 rounded-xl bg-[#10151F] hover:bg-slate-800 border border-slate-700 text-slate-300 text-xs font-semibold transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                              >
+                                <span>{copy.reviewsTab.pendingBtn}</span>
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              disabled={isBusy}
+                              onClick={() => setReviewDeleteConfirm(review.id)}
+                              className="min-h-[36px] px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-semibold transition cursor-pointer disabled:opacity-50 ms-auto"
+                            >
+                              {copy.reviewsTab.deleteBtn}
+                            </button>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </section>
+          )}
+          {/* ============================================================ */}
           {/* TAB 5: CLIENTS & LOYALTY MANAGEMENT */}
           {/* ============================================================ */}
           {activeTab === 'clients' && (
@@ -1785,13 +2176,13 @@ export default function AdminDashboard() {
       </main>
 
       {/* ============================================================ */}
-      {/* MOBILE & TABLET FIXED BOTTOM NAVIGATION BAR (5 tabs) */}
+      {/* MOBILE & TABLET FIXED BOTTOM NAVIGATION BAR (6 tabs) */}
       {/* ============================================================ */}
       <nav
-        className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-[#141B29]/95 backdrop-blur-xl border-t border-slate-800/90 px-1.5 py-1.5 shadow-[0_-10px_30px_rgba(0,0,0,0.65)] print:hidden"
+        className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-[#141B29]/95 backdrop-blur-xl border-t border-slate-800/90 px-1 py-1.5 shadow-[0_-10px_30px_rgba(0,0,0,0.65)] print:hidden"
         aria-label="Admin Bottom Navigation"
       >
-        <div className="max-w-xl mx-auto grid grid-cols-5 gap-1">
+        <div className="max-w-2xl mx-auto grid grid-cols-6 gap-0.5">
           {navItems.map((item) => {
             const isActive = activeTab === item.id;
             return (
@@ -2139,6 +2530,36 @@ export default function AdminDashboard() {
               <button
                 type="button"
                 onClick={handleConfirmDelete}
+                className="min-h-[40px] px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold cursor-pointer"
+              >
+                {copy.actions.delete}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Delete Review Confirmation Modal */}
+      {reviewDeleteConfirm !== null && (
+        <div
+          dir={dir}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+        >
+          <div className="w-full max-w-sm rounded-2xl bg-[#182030] border border-slate-700 p-6 space-y-4 shadow-2xl text-start">
+            <h3 className="text-base font-bold text-white">
+              {copy.reviewsTab.confirmDelete}
+            </h3>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setReviewDeleteConfirm(null)}
+                className="min-h-[40px] px-4 py-2 rounded-xl border border-slate-700 text-slate-300 text-xs font-semibold cursor-pointer"
+              >
+                {copy.actions.close}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteReview(reviewDeleteConfirm)}
                 className="min-h-[40px] px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold cursor-pointer"
               >
                 {copy.actions.delete}
