@@ -68,7 +68,7 @@ class PublicApiController extends Controller
                       });
                   });
             })
-            ->select(['id', 'user_id', 'name', 'bio', 'specialty', 'experience', 'rating', 'image_url', 'is_active'])
+            ->select(['id', 'user_id', 'name', 'title_fr', 'title_ar', 'bio', 'specialty', 'specialty_fr', 'specialty_ar', 'experience', 'rating', 'reviews_count', 'image_url', 'is_active'])
             ->with(['workingHours:id,barber_id,day_of_week,start_time,end_time,break_start,break_end,is_day_off'])
             ->orderBy('rating', 'desc')
             ->get();
@@ -236,7 +236,7 @@ class PublicApiController extends Controller
     {
         $data = Cache::remember('public_approved_reviews', 1800, function () {
             $reviews = Review::where('is_approved', true)
-                ->select(['id', 'client_id', 'barber_id', 'rating', 'comment', 'is_approved', 'created_at'])
+                ->select(['id', 'client_id', 'barber_id', 'rating', 'comment', 'comment_ar', 'city', 'service_used', 'is_approved', 'created_at'])
                 ->with([
                     'client:id,name,avatar,profile_photo_path',
                     'barber:id,name',
@@ -263,7 +263,7 @@ class PublicApiController extends Controller
     {
         $data = Cache::remember('public_gallery_items', 3600, function () {
             return Gallery::where('is_active', true)
-                ->select(['id', 'title', 'category', 'image_url', 'is_active'])
+                ->select(['id', 'title', 'title_fr', 'title_ar', 'category', 'image_url', 'col_span', 'is_active'])
                 ->get();
         });
 

@@ -16,6 +16,9 @@ class Review extends Model
         'barber_id',
         'rating',
         'comment',
+        'comment_ar',
+        'city',
+        'service_used',
         'is_approved',
     ];
 
