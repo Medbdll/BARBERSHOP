@@ -235,10 +235,17 @@ class PublicApiController extends Controller
     public function reviews(): JsonResponse
     {
         $data = Cache::remember('public_approved_reviews', 1800, function () {
-            $reviews = Review::where('is_approved', true)
-                ->select(['id', 'client_id', 'barber_id', 'rating', 'comment', 'comment_ar', 'city', 'service_used', 'is_approved', 'created_at'])
+            $reviews = Review::where(function ($q) {
+                    $q->where('status', 'approved')
+                      ->orWhere(function ($sub) {
+                          $sub->where('is_approved', true)
+                              ->where('status', '!=', 'rejected');
+                      });
+                })
+                ->select(['id', 'user_id', 'client_id', 'barber_id', 'rating', 'comment', 'comment_ar', 'city', 'service_used', 'status', 'is_approved', 'created_at'])
                 ->with([
                     'client:id,name,avatar,profile_photo_path',
+                    'user:id,name,avatar,profile_photo_path',
                     'barber:id,name',
                 ])
                 ->orderBy('created_at', 'desc')

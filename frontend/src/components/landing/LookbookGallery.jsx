@@ -1,5 +1,4 @@
 import React from 'react';
-import { lookbookData as fallbackGallery } from '../../data/barberShopData';
 import {
   getImageUrl,
   handleImageFallbackError,
@@ -12,7 +11,7 @@ export default function LookbookGallery({
   gallery = [],
   loading = false,
 }) {
-  const sourceGallery = gallery && gallery.length > 0 ? gallery : fallbackGallery;
+  const sourceGallery = Array.isArray(gallery) ? gallery : [];
 
   return (
     <section id="lookbook" className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
@@ -35,6 +34,10 @@ export default function LookbookGallery({
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="rounded-2xl bg-gray-900 border border-gray-800 h-full"></div>
           ))}
+        </div>
+      ) : sourceGallery.length === 0 ? (
+        <div className="text-center py-12 text-gray-400 text-sm">
+          {lang === 'ar' ? 'لا توجد صور في المعرض حالياً.' : 'Aucune photo disponible dans le lookbook.'}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 auto-rows-[220px]">

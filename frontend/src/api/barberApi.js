@@ -90,6 +90,16 @@ export const getReviews = async (forceFresh = false) => {
   });
 };
 
+export const getPublicReviews = async (forceFresh = false) => {
+  const cacheKey = 'public_reviews_list';
+  if (forceFresh) memoryCache.delete(cacheKey);
+
+  return cachedGet(cacheKey, async () => {
+    const response = await api.get('/reviews/public');
+    return response.data;
+  });
+};
+
 export const getGallery = async (forceFresh = false) => {
   const cacheKey = 'gallery_list';
   if (forceFresh) memoryCache.delete(cacheKey);
@@ -391,5 +401,20 @@ export const updateAdminAppointmentStatus = async (id, status) => {
 
 export const updateAdminAppointment = async (id, payload) => {
   const response = await api.put(`/admin/appointments/${id}`, payload);
+  return response.data;
+};
+
+export const getAdminReviews = async () => {
+  const response = await api.get('/admin/reviews');
+  return response.data;
+};
+
+export const updateAdminReviewStatus = async (id, status) => {
+  const response = await api.patch(`/admin/reviews/${id}/status`, { status });
+  return response.data;
+};
+
+export const deleteAdminReview = async (id) => {
+  const response = await api.delete(`/admin/reviews/${id}`);
   return response.data;
 };

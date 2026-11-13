@@ -1,5 +1,4 @@
 import React from 'react';
-import { barbersData as fallbackBarbers } from '../../data/barberShopData';
 import {
   getImageUrl,
   handleImageFallbackError,
@@ -13,7 +12,7 @@ export default function BarbersSection({
   loading = false,
   onSelectBarber,
 }) {
-  const sourceBarbers = barbers && barbers.length > 0 ? barbers : fallbackBarbers;
+  const sourceBarbers = Array.isArray(barbers) ? barbers : [];
 
   return (
     <section id="barbers" className="py-24 px-4 sm:px-6 lg:px-8 bg-gray-950/80 border-y border-gray-800/80">
@@ -41,6 +40,10 @@ export default function BarbersSection({
                 <div className="h-3 bg-gray-800/60 rounded w-3/4"></div>
               </div>
             ))}
+          </div>
+        ) : sourceBarbers.length === 0 ? (
+          <div className="text-center py-12 text-gray-400 text-sm">
+            {lang === 'ar' ? 'لا يوجد حلاقون متاحون حالياً.' : 'Aucun barbier disponible pour le moment.'}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
