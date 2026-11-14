@@ -47,6 +47,11 @@ export const checkBackendStatus = async () => {
   return response.data;
 };
 
+/**
+ * Public catalog services.
+ * Returns raw API services directly with their image_url intact from the backend,
+ * without overwriting image_url or image with static fallback objects.
+ */
 export const getServices = async (category = 'all', forceFresh = false) => {
   const cacheKey = `services_${category || 'all'}`;
   if (forceFresh) memoryCache.delete(cacheKey);
