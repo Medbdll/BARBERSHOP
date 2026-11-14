@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   getImageUrl,
   handleImageFallbackError,
+  DEFAULT_SERVICE_PLACEHOLDER,
 } from '../../utils/getImageUrl';
 
 export default function ServicesSection({
@@ -13,6 +14,7 @@ export default function ServicesSection({
   selectedServiceId,
 }) {
   const [activeCategory, setActiveCategory] = useState('all');
+  const fallbackImg = DEFAULT_SERVICE_PLACEHOLDER || '/images/fallback-barber.jpg';
 
   const categories = [
     { key: 'all', label: t.services.filterAll },
@@ -22,12 +24,19 @@ export default function ServicesSection({
     { key: 'vip', label: t.services.filterVip },
   ];
 
-  const sourceData = Array.isArray(services) ? services : [];
+  // Safely normalize incoming services prop and filter active services only
+  const rawServices = Array.isArray(services)
+    ? services
+    : services?.services || services?.data || [];
+
+  const activeServices = rawServices.filter(
+    (s) => s && s.is_active !== false && s.is_active !== 0
+  );
 
   const filteredServices =
     activeCategory === 'all'
-      ? sourceData
-      : sourceData.filter((s) => s.category === activeCategory);
+      ? activeServices
+      : activeServices.filter((s) => s.category === activeCategory);
 
   return (
     <section id="services" className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
@@ -87,13 +96,27 @@ export default function ServicesSection({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredServices.map((service) => {
             const isSelected = selectedServiceId === service.id;
-            const name = lang === 'ar' ? (service.title_ar || service.nameAr || service.name) : (service.title_fr || service.nameFr || service.name);
-            const desc = lang === 'ar' ? (service.description_ar || service.descriptionAr || service.description) : (service.description_fr || service.descriptionFr || service.description);
-            const rawDuration = typeof service.duration === 'number' ? service.duration : parseInt(service.duration, 10) || 30;
+            const name =
+              lang === 'ar'
+                ? service.title_ar || service.nameAr || service.name || service.title_fr || ''
+                : service.title_fr || service.nameFr || service.name || service.title_ar || '';
+            const desc =
+              lang === 'ar'
+                ? service.description_ar || service.descriptionAr || service.description || service.description_fr || ''
+                : service.description_fr || service.descriptionFr || service.description || service.description_ar || '';
+
+            const durationVal =
+              service.duration_minutes !== undefined && service.duration_minutes !== null
+                ? service.duration_minutes
+                : service.duration;
+            const rawDuration =
+              typeof durationVal === 'number'
+                ? durationVal
+                : parseInt(durationVal, 10) || 30;
             const formattedDuration = `${rawDuration} ${t.common?.minutes || 'min'}`;
             const currencyLabel = t.common?.currency || 'MAD';
 
-            const imageUrl = getImageUrl(service.image_url);
+            const imageUrl = getImageUrl(service.image_url || service.image, fallbackImg);
 
             return (
               <div
@@ -118,13 +141,11 @@ export default function ServicesSection({
                     alt={name}
                     loading="lazy"
                     decoding="async"
-                    onError={(e) => handleImageFallbackError(e, categoryFallback)}
+                    onError={(e) => handleImageFallbackError(e, fallbackImg)}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   {/* Dark gradient overlay at bottom for text readability */}
                   <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/30 to-transparent" />
-                 
-        
                 </div>
 
                 {/* Service Info */}
