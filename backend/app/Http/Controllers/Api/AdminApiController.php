@@ -672,6 +672,31 @@ class AdminApiController extends Controller
         return app(ServiceController::class)->destroy($id);
     }
 
+    /**
+     * Store an uploaded image file cleanly as a relative public-disk path, or normalize an image_url string.
+     */
+    protected function resolveStoredImagePath(
+        Request $request,
+        array &$data,
+        string $directory,
+        ?string $previousRawPath = null
+    ): void {
+        if ($request->hasFile('image')) {
+            $oldPath = MediaUrl::extractDeletableDiskPath($previousRawPath);
+            if ($oldPath && Storage::disk('public')->exists($oldPath)) {
+                Storage::disk('public')->delete($oldPath);
+            }
+
+            $data['image_url'] = $request->file('image')->store($directory, 'public');
+            unset($data['image']);
+            return;
+        }
+
+        if (array_key_exists('image_url', $data)) {
+            $data['image_url'] = MediaUrl::toStoragePath($data['image_url']);
+        }
+    }
+
     // ==========================================
     // BARBERS CRUD
     // ==========================================
