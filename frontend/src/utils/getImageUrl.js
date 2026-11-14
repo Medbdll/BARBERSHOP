@@ -1,10 +1,21 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
-
 /**
- * Strip trailing `/api` segment to derive the backend origin for public storage files.
+ * Resolve the backend base URL (without /api) for public storage files.
+ * Uses VITE_API_URL or VITE_API_BASE_URL, defaulting to https://api.barberoza.shop in production.
  */
 export const getBackendOrigin = () => {
-  return API_BASE_URL.replace(/\/api\/?$/i, '').replace(/\/+$/, '');
+  const envUrl =
+    import.meta.env.VITE_API_URL ||
+    import.meta.env.VITE_API_BASE_URL;
+
+  if (envUrl) {
+    const cleaned = envUrl.replace(/\/api\/?$/i, '').replace(/\/+$/, '');
+    if (import.meta.env.PROD && (cleaned.includes('localhost') || cleaned.includes('127.0.0.1'))) {
+      return 'https://api.barberoza.shop';
+    }
+    return cleaned;
+  }
+
+  return 'https://api.barberoza.shop';
 };
 
 export const DEFAULT_AVATAR_PLACEHOLDER =
@@ -18,7 +29,7 @@ export const DEFAULT_SERVICE_PLACEHOLDER =
 
 /**
  * Resolve any backend relative path, legacy localhost URL, or external URL into
- * a production-safe URL using VITE_API_BASE_URL (with `/api` stripped).
+ * a production-safe URL.
  *
  * @param {string|null|undefined} path
  * @param {string|null} fallback
@@ -41,23 +52,33 @@ export const getImageUrl = (path, fallback = null) => {
 
   const backendOrigin = getBackendOrigin();
 
+  // 1. If already a full URL starting with http:// or https://
   if (/^https?:\/\//i.test(trimmed)) {
     try {
       const parsed = new URL(trimmed);
       const host = parsed.hostname.toLowerCase();
-      if (host === 'localhost' || host === '127.0.0.1' || host === '::1') {
-        const cleanPathname = parsed.pathname.replace(/^\/+/, '');
-        const storagePath = cleanPathname.startsWith('storage/')
-          ? cleanPathname
-          : `storage/${cleanPathname}`;
-        return `${backendOrigin}/${storagePath}`;
+      const isLocalHost = host === 'localhost' || host === '127.0.0.1' || host === '::1';
+
+      // If it contains localhost or 127.0.0.1 in production (or mismatched host in dev), replace origin
+      if (isLocalHost) {
+        if (import.meta.env.PROD || (backendOrigin && !trimmed.startsWith(backendOrigin))) {
+          const cleanPathname = parsed.pathname.replace(/^\/+/, '');
+          const storagePath = cleanPathname.startsWith('storage/')
+            ? cleanPathname
+            : `storage/${cleanPathname}`;
+          return `${backendOrigin}/${storagePath}`;
+        }
+        return trimmed;
       }
+
+      // Otherwise, return the full https://... URL directly as-is without prepending anything or replacing it with a local static map!
       return trimmed;
     } catch {
       return fallback || trimmed;
     }
   }
 
+  // 2. Relative paths starting with /storage/, storage/, services/, or other directories
   const cleanRelative = trimmed.replace(/^\/+/, '');
   const normalizedStoragePath = cleanRelative.startsWith('storage/')
     ? cleanRelative

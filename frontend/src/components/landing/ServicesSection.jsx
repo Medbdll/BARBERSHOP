@@ -116,7 +116,8 @@ export default function ServicesSection({
             const formattedDuration = `${rawDuration} ${t.common?.minutes || 'min'}`;
             const currencyLabel = t.common?.currency || 'MAD';
 
-            const imageUrl = getImageUrl(service.image_url || service.image, fallbackImg);
+            const rawImg = service.image_url || service.image_path || service.image;
+            const imageUrl = getImageUrl(rawImg, fallbackImg);
 
             return (
               <div
