@@ -15,6 +15,26 @@ import {
   getGallery,
 } from '../../api/barberApi';
 
+/**
+ * Safely extract an array payload from various API response shapes:
+ * - Direct array
+ * - res.data as array
+ * - res.data[key]
+ * - res[key]
+ * - res.data.data (paginated Laravel resource)
+ */
+function extractArray(res, key) {
+  if (!res) return [];
+  if (Array.isArray(res)) return res;
+  if (Array.isArray(res.data)) return res.data;
+  if (key && Array.isArray(res.data?.[key])) return res.data[key];
+  if (key && Array.isArray(res[key])) return res[key];
+  if (Array.isArray(res.data?.data)) return res.data.data;
+  if (Array.isArray(res.items)) return res.items;
+  if (Array.isArray(res.data?.items)) return res.data.items;
+  return [];
+}
+
 export default function LandingPage({ onOpenAuth }) {
   const { lang, setLang, t, dir } = useLanguage();
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
@@ -30,15 +50,35 @@ export default function LandingPage({ onOpenAuth }) {
 
   useEffect(() => {
     let ignore = false;
-    Promise.all([getServices(), getBarbers(), getReviews(), getGallery()])
+    Promise.allSettled([getServices(), getBarbers(), getReviews(), getGallery()])
       .then(([srvRes, brbRes, revRes, galRes]) => {
-        if (!ignore) {
-          if (srvRes?.data) setServices(srvRes.data);
-          if (brbRes?.data) setBarbers(brbRes.data);
-          if (revRes?.data) setReviews(revRes.data);
-          if (galRes?.data) setGallery(galRes.data);
-          setLoading(false);
+        if (ignore) return;
+
+        if (srvRes.status === 'fulfilled') {
+          setServices(extractArray(srvRes.value, 'services'));
+        } else {
+          console.warn('Failed to load services:', srvRes.reason);
         }
+
+        if (brbRes.status === 'fulfilled') {
+          setBarbers(extractArray(brbRes.value, 'barbers'));
+        } else {
+          console.warn('Failed to load barbers:', brbRes.reason);
+        }
+
+        if (revRes.status === 'fulfilled') {
+          setReviews(extractArray(revRes.value, 'reviews'));
+        } else {
+          console.warn('Failed to load reviews:', revRes.reason);
+        }
+
+        if (galRes.status === 'fulfilled') {
+          setGallery(extractArray(galRes.value, 'gallery'));
+        } else {
+          console.warn('Failed to load gallery:', galRes.reason);
+        }
+
+        setLoading(false);
       })
       .catch((err) => {
         console.warn('Backend API connection notice, fallback to static cache:', err);

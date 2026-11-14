@@ -13,6 +13,9 @@ export const DEFAULT_AVATAR_PLACEHOLDER =
 export const DEFAULT_GALLERY_PLACEHOLDER =
   'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&q=80&w=800';
 
+export const DEFAULT_SERVICE_PLACEHOLDER =
+  'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&q=80&w=800';
+
 /**
  * Resolve any backend relative path, legacy localhost URL, or external URL into
  * a production-safe URL using VITE_API_BASE_URL (with `/api` stripped).

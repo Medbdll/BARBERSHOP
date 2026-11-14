@@ -8,7 +8,14 @@ export default function TestimonialsSection({
   reviews = [],
   loading = false,
 }) {
-  const sourceReviews = Array.isArray(reviews) ? reviews : [];
+  // Safely normalize incoming reviews prop and filter only approved reviews
+  const rawReviews = Array.isArray(reviews)
+    ? reviews
+    : reviews?.reviews || reviews?.data || [];
+
+  const approvedReviews = rawReviews.filter(
+    (r) => r && (!r.status || r.status === 'approved')
+  );
 
   return (
     <section id="testimonials" className="py-24 px-4 sm:px-6 lg:px-8 bg-gray-950/70 border-t border-gray-800/80">
@@ -46,21 +53,37 @@ export default function TestimonialsSection({
               </div>
             ))}
           </div>
-        ) : sourceReviews.length === 0 ? (
+        ) : approvedReviews.length === 0 ? (
           <div className="text-center py-12 text-gray-400 text-sm">
             {lang === 'ar' ? 'لا توجد آراء منشورة حالياً.' : 'Aucun avis publié pour le moment.'}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
-            {sourceReviews.map((review) => {
-              const clientName = review.client_name || review.author;
-              const groomedByText = t.testimonials.groomedBy || (lang === 'ar' ? 'اعتنى به' : 'Soigné par');
-              const vipClientText = t.testimonials.vipClient || (lang === 'ar' ? 'زبون مميز VIP' : 'Client Privilège VIP');
-              const barberName = review.barber_name ? `${groomedByText} ${review.barber_name}` : (review.service || vipClientText);
+            {approvedReviews.map((review) => {
+              const clientName =
+                review.user?.name ||
+                review.client_name ||
+                review.author ||
+                (lang === 'ar' ? 'زبون مميز' : 'Client VIP');
+
+              const groomedByText = t.testimonials?.groomedBy || (lang === 'ar' ? 'اعتنى به' : 'Soigné par');
+              const vipClientText = t.testimonials?.vipClient || (lang === 'ar' ? 'زبون مميز VIP' : 'Client Privilège VIP');
+              const rawBarber = review.barber?.name || review.barber_name;
+              const barberName = rawBarber
+                ? `${groomedByText} ${rawBarber}`
+                : (review.service || vipClientText);
+
               const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(clientName || 'VIP')}&background=1F2937&color=D97706`;
-              const avatar = getImageUrl(review.client_avatar || review.avatar, fallbackAvatar);
-              const rating = review.rating || 5;
-              const quote = review.comment || (lang === 'ar' ? review.quoteAr : review.quoteFr);
+              const avatar = getImageUrl(
+                review.user?.avatar || review.client_avatar || review.avatar,
+                fallbackAvatar
+              );
+              const rating = Math.min(5, Math.max(1, Number(review.rating) || 5));
+              const quote =
+                (lang === 'ar' ? review.comment_ar : null) ||
+                review.comment ||
+                (lang === 'ar' ? review.quoteAr || review.quoteFr : review.quoteFr || review.quoteAr) ||
+                '';
 
               return (
                 <div
