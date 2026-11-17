@@ -1,9 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600;1,700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Cinzel', 'Playfair Display', Georgia, serif;
-  --font-serif: 'Cinzel', 'Playfair Display', Georgia, serif;
+  --font-sans: 'Poppins', sans-serif;
+  --font-serif: 'Poppins', sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
@@ -15,7 +15,7 @@
   html, body {
     margin: 0;
     padding: 0;
-    font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
+    font-family: 'Poppins', sans-serif;
     background-color: #111827;
     color: #f3f4f6;
     min-height: 100vh;
@@ -25,24 +25,24 @@
   .font-serif,
   nav, button,
   [role="button"] {
-    font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
-    letter-spacing: 0.04em;
+    font-family: 'Poppins', sans-serif;
   }
 
   p, span, a, input, select, textarea, label {
-    font-family: 'Playfair Display', 'Cinzel', Georgia, serif;
+    font-family: 'Poppins', sans-serif;
   }
 }
 
-*, *::before, *::after {
+/* *, *::before, *::after {
   font-family: inherit;
-}
+} */
 
 .font-mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
 }
 
 /* Arabic typography & RTL adaptations */
+.font-arabic,
 [dir="rtl"], [dir="rtl"] * {
   font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   letter-spacing: 0;
