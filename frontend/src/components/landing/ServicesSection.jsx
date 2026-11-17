@@ -14,7 +14,7 @@ export default function ServicesSection({
   selectedServiceId,
 }) {
   const [activeCategory, setActiveCategory] = useState('all');
-  const fallbackImg = DEFAULT_SERVICE_PLACEHOLDER || '/images/fallback-barber.jpg';
+  const fallbackImg = DEFAULT_SERVICE_PLACEHOLDER;
 
   const categories = [
     { key: 'all', label: t.services.filterAll },
@@ -59,11 +59,10 @@ export default function ServicesSection({
               key={cat.key}
               type="button"
               onClick={() => setActiveCategory(cat.key)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
-                activeCategory === cat.key
-                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-gray-950 shadow-lg shadow-amber-500/20'
-                  : 'bg-gray-900/90 text-gray-300 hover:text-white border border-gray-800 hover:border-gray-700'
-              }`}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${activeCategory === cat.key
+                ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-gray-950 shadow-lg shadow-amber-500/20'
+                : 'bg-gray-900/90 text-gray-300 hover:text-white border border-gray-800 hover:border-gray-700'
+                }`}
             >
               {cat.label}
             </button>
@@ -116,17 +115,15 @@ export default function ServicesSection({
             const formattedDuration = `${rawDuration} ${t.common?.minutes || 'min'}`;
             const currencyLabel = t.common?.currency || 'MAD';
 
-            const rawImg = service.image_url || service.image_path || service.image;
-            const imageUrl = getImageUrl(rawImg, fallbackImg);
+            const imageUrl = getImageUrl(service.image_url || service.image, fallbackImg);
 
             return (
               <div
                 key={service.id}
-                className={`rounded-2xl flex flex-col justify-between transition-all duration-300 relative group overflow-hidden ${
-                  isSelected
-                    ? 'bg-gray-900 border-2 border-amber-500 shadow-xl shadow-amber-500/10'
-                    : 'bg-gray-900/60 hover:bg-gray-900/90 border border-gray-800 hover:border-amber-500/40 shadow-lg'
-                }`}
+                className={`rounded-2xl flex flex-col justify-between transition-all duration-300 relative group overflow-hidden ${isSelected
+                  ? 'bg-gray-900 border-2 border-amber-500 shadow-xl shadow-amber-500/10'
+                  : 'bg-gray-900/60 hover:bg-gray-900/90 border border-gray-800 hover:border-amber-500/40 shadow-lg'
+                  }`}
               >
                 {/* Popular or Recommended badge */}
                 {(service.popular || service.category === 'vip') && (
@@ -181,11 +178,10 @@ export default function ServicesSection({
                     <button
                       type="button"
                       onClick={() => onSelectService(service)}
-                      className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 ${
-                        isSelected
-                          ? 'bg-emerald-500 text-gray-950 shadow-md shadow-emerald-500/20'
-                          : 'bg-gray-800 hover:bg-amber-500 text-gray-200 hover:text-gray-950 border border-gray-700 hover:border-amber-500 shadow'
-                      }`}
+                      className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 ${isSelected
+                        ? 'bg-emerald-500 text-gray-950 shadow-md shadow-emerald-500/20'
+                        : 'bg-gray-800 hover:bg-amber-500 text-gray-200 hover:text-gray-950 border border-gray-700 hover:border-amber-500 shadow'
+                        }`}
                     >
                       {isSelected ? (
                         <span>{t.services.selectedBtn}</span>
