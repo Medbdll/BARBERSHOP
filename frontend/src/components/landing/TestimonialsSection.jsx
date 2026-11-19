@@ -17,6 +17,9 @@ export default function TestimonialsSection({
     (r) => r && (!r.status || r.status === 'approved')
   );
 
+  // Display only the last 3 approved reviews in landing page
+  const displayedReviews = approvedReviews.slice(0, 3);
+
   return (
     <section id="testimonials" className="py-24 px-4 sm:px-6 lg:px-8 bg-gray-950/70 border-t border-gray-800/80">
       <div className="max-w-7xl mx-auto">
@@ -53,13 +56,13 @@ export default function TestimonialsSection({
               </div>
             ))}
           </div>
-        ) : approvedReviews.length === 0 ? (
+        ) : displayedReviews.length === 0 ? (
           <div className="text-center py-12 text-gray-400 text-sm">
             {lang === 'ar' ? 'لا توجد آراء منشورة حالياً.' : 'Aucun avis publié pour le moment.'}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
-            {approvedReviews.map((review) => {
+            {displayedReviews.map((review) => {
               const clientName =
                 review.user?.name ||
                 review.client_name ||
